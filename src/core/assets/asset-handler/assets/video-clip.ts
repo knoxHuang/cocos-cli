@@ -1,13 +1,9 @@
 import { Asset } from '@editor/asset-db';
 // import { VideoClip, js } from 'cc';
-
-import { getDependUUIDList } from '../utils';
 import { AssetHandler } from '../../@types/protected';
-import { serialize } from '../../../engine/editor-extends/utils/serialize';
 
 export const VideoHandler: AssetHandler = {
     name: 'video-clip',
-    extensions: ['.mp4'],
     // assetType: js.getClassName(VideoClip),
     assetType: 'cc.VideoClip',
     importer: {
@@ -23,26 +19,25 @@ export const VideoHandler: AssetHandler = {
          */
         async import(asset: Asset) {
             await asset.copyToLibrary(asset.extname, asset.source);
-            // const element = document.createElement('video');
+            let duration = 0;
+            try {
+                duration = await getVideoDurationInSeconds(asset.source);
+            } catch (error) {
+                console.error(
+                    `Loading video ${asset.source} failed, the video you are using may be in a corrupted format or not supported by the current browser version of the editor, in the latter case you can ignore this error.`,
+                );
+                console.debug(error);
+            }
 
-            // try {
-            //     await loadVideo(asset, element);
-            // } catch (error) {
-            //     console.error(
-            //         `Loading video ${asset.source} failed, the video you are using may be in a corrupted format or not supported by the current browser version of the editor, in the latter case you can ignore this error.`,
-            //     );
-            //     console.debug(error);
-            // }
-
-            // const video = createVideo(asset, element.duration);
-            // TODO serialize 定义规范
+            // const video = createVideo(asset, duration);
             // const serializeJSON = serialize(video) as string;
-            await asset.saveToLibrary('.json', JSON.stringify({
-                test: 'video',
-            }));
 
-            // const depends = getDependUUIDList(serializeJSON);
-            // asset.setData('depends', depends);
+            // await asset.saveToLibrary('.json', serializeJSON);
+            // TODO temp
+            await asset.saveToLibrary('.json', JSON.stringify({
+                duration,
+                name: asset._name,
+            }));
             return true;
         },
     },
@@ -50,25 +45,12 @@ export const VideoHandler: AssetHandler = {
 
 export default VideoHandler;
 
-function loadVideo(asset: Asset, element: HTMLVideoElement) {
-    return new Promise<void>((resolve, reject) => {
-        element.addEventListener('loadedmetadata', async () => {
-            resolve();
-        });
-        element.addEventListener('error', (error) => {
-            reject(error);
-        });
-
-        try {
-            const str = asset.source
-                .split(/\\|\//)
-                .map((str) => encodeURIComponent(str))
-                .join('/')
-                .replace('%3A', ':');
-            element.src = str;
-        } catch (error) {
-            reject(error);
-        }
+function getVideoDurationInSeconds(path: string) {
+    return new Promise<number>((resolve, reject) => {
+        const { getVideoDurationInSeconds } = require('get-video-duration')
+        getVideoDurationInSeconds(path).then((duration: number) => {
+            resolve(duration);
+        })
     });
 }
 
