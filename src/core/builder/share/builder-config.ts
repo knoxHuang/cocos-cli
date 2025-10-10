@@ -2,7 +2,7 @@ import { join } from "path";
 import { IBaseConfiguration, ConfigurationScope, configurationRegistry } from "../../configuration";
 import { IBuildCommonOptions, Platform } from "../@types";
 import { PLATFORMS } from "./platforms-options";
-import { BuildConfiguration } from "../../assets/@types/config-export";
+import { BuildConfiguration } from "../@types/config-export";
 
 export const BuildGlobalInfo = {
     // 一些常量
@@ -52,6 +52,7 @@ export function getBuildCommonOptions(): IBuildCommonOptions {
         startSceneAssetBundle: false,
         moveRemoteBundleScript: false,
         nativeCodeBundleMode: 'asmjs',
+        packAutoAtlas: true,
     }
 }
 
@@ -202,7 +203,6 @@ export function getDefaultConfig(): BuildConfiguration {
                     }
                 }
             },
-            userPresetMode: "config",
             customConfigs: {},
             genMipmaps: true
         }

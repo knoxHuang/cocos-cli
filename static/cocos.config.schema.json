@@ -20,11 +20,578 @@
                 "platforms": {
                     "additionalProperties": false,
                     "properties": {
-                        "web-desktop": {}
+                        "web-desktop": {
+                            "additionalProperties": false,
+                            "properties": {
+                                "__version__": {
+                                    "type": "string"
+                                },
+                                "binGroupConfig": {
+                                    "$ref": "#/definitions/IBinGroupConfig"
+                                },
+                                "buildBundleOnly": {
+                                    "type": "boolean"
+                                },
+                                "buildMode": {
+                                    "enum": [
+                                        "bundle",
+                                        "normal",
+                                        "script"
+                                    ],
+                                    "type": "string"
+                                },
+                                "buildPath": {
+                                    "type": "string"
+                                },
+                                "buildScriptTargets": {
+                                    "type": "string"
+                                },
+                                "bundleCommonChunk": {
+                                    "type": "boolean"
+                                },
+                                "bundleCommonJs": {
+                                    "type": "string"
+                                },
+                                "bundleConfigs": {
+                                    "items": {
+                                        "$ref": "#/definitions/IBundleOptions"
+                                    },
+                                    "type": "array"
+                                },
+                                "customJointTextureLayouts": {
+                                    "items": {
+                                        "$ref": "#/definitions/ICustomJointTextureLayout"
+                                    },
+                                    "type": "array"
+                                },
+                                "customLayers": {
+                                    "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                "customPipeline": {
+                                    "type": "boolean"
+                                },
+                                "debug": {
+                                    "type": "boolean"
+                                },
+                                "designResolution": {
+                                    "$ref": "#/definitions/IDesignResolution"
+                                },
+                                "downloadMaxConcurrency": {
+                                    "type": "number"
+                                },
+                                "engineInfo": {
+                                    "$ref": "#/definitions/EngineInfo"
+                                },
+                                "engineModulesConfigKey": {
+                                    "type": "string"
+                                },
+                                "experimentalEraseModules": {
+                                    "type": "boolean"
+                                },
+                                "flags": {
+                                    "$ref": "#/definitions/IFlags"
+                                },
+                                "highQuality": {
+                                    "type": "boolean"
+                                },
+                                "includeModules": {
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "type": "array"
+                                },
+                                "inlineEnum": {
+                                    "type": "boolean"
+                                },
+                                "inlineSpriteFrames": {
+                                    "type": "boolean"
+                                },
+                                "logDest": {
+                                    "type": "string"
+                                },
+                                "macroConfig": {
+                                    "$ref": "#/definitions/Record<string,string|number|boolean>"
+                                },
+                                "macroCustom": {
+                                    "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "boolean"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                "mainBundleCompressionType": {
+                                    "$ref": "#/definitions/BundleCompressionType"
+                                },
+                                "mainBundleIsRemote": {
+                                    "type": "boolean"
+                                },
+                                "mangleProperties": {
+                                    "type": "boolean"
+                                },
+                                "md5Cache": {
+                                    "type": "boolean"
+                                },
+                                "moveRemoteBundleScript": {
+                                    "type": "boolean"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "nativeCodeBundleMode": {
+                                    "enum": [
+                                        "asmjs",
+                                        "both",
+                                        "wasm"
+                                    ],
+                                    "type": "string"
+                                },
+                                "nextStages": {
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "type": "array"
+                                },
+                                "outputName": {
+                                    "type": "string"
+                                },
+                                "overwriteProjectSettings": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "includeModules": {
+                                            "additionalProperties": {
+                                                "type": "string"
+                                            },
+                                            "properties": {
+                                                "gfx-webgl2": {
+                                                    "enum": [
+                                                        "inherit-project-setting",
+                                                        "off",
+                                                        "on"
+                                                    ],
+                                                    "type": "string"
+                                                },
+                                                "physics": {
+                                                    "type": "string"
+                                                },
+                                                "physics-2d": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "macroConfig": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "cleanupImageCache": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "packAutoAtlas": {
+                                    "type": "boolean"
+                                },
+                                "packages": {
+                                    "$ref": "#/definitions/Record<\"web-desktop\",IOptions>"
+                                },
+                                "physicsConfig": {
+                                    "$ref": "#/definitions/IPhysicsConfig"
+                                },
+                                "platform": {
+                                    "const": "web-desktop",
+                                    "type": "string"
+                                },
+                                "polyfills": {
+                                    "$ref": "#/definitions/IPolyFills"
+                                },
+                                "preview": {
+                                    "default": false,
+                                    "description": "是否是预览进程发送的构建请求。",
+                                    "type": "boolean"
+                                },
+                                "renderPipeline": {
+                                    "type": "string"
+                                },
+                                "scenes": {
+                                    "items": {
+                                        "$ref": "#/definitions/IBuildSceneItem"
+                                    },
+                                    "type": "array"
+                                },
+                                "server": {
+                                    "type": "string"
+                                },
+                                "skipCompressTexture": {
+                                    "type": "boolean"
+                                },
+                                "sortingLayers": {
+                                    "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "id": {
+                                                "type": "number"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                "sourceMaps": {
+                                    "enum": [
+                                        false,
+                                        "inline",
+                                        true
+                                    ]
+                                },
+                                "splashScreen": {
+                                    "$ref": "#/definitions/ISplashSetting"
+                                },
+                                "stage": {
+                                    "type": "string"
+                                },
+                                "startScene": {
+                                    "type": "string"
+                                },
+                                "startSceneAssetBundle": {
+                                    "type": "boolean"
+                                },
+                                "taskId": {
+                                    "type": "string"
+                                },
+                                "taskName": {
+                                    "type": "string"
+                                },
+                                "useCacheConfig": {
+                                    "$ref": "#/definitions/IBuildCacheUseConfig"
+                                },
+                                "useSplashScreen": {
+                                    "type": "boolean"
+                                },
+                                "wasmCompressionMode": {
+                                    "const": "brotli",
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "web-mobile": {
+                            "additionalProperties": false,
+                            "properties": {
+                                "__version__": {
+                                    "type": "string"
+                                },
+                                "binGroupConfig": {
+                                    "$ref": "#/definitions/IBinGroupConfig"
+                                },
+                                "buildBundleOnly": {
+                                    "type": "boolean"
+                                },
+                                "buildMode": {
+                                    "enum": [
+                                        "bundle",
+                                        "normal",
+                                        "script"
+                                    ],
+                                    "type": "string"
+                                },
+                                "buildPath": {
+                                    "type": "string"
+                                },
+                                "buildScriptTargets": {
+                                    "type": "string"
+                                },
+                                "bundleCommonChunk": {
+                                    "type": "boolean"
+                                },
+                                "bundleCommonJs": {
+                                    "type": "string"
+                                },
+                                "bundleConfigs": {
+                                    "items": {
+                                        "$ref": "#/definitions/IBundleOptions"
+                                    },
+                                    "type": "array"
+                                },
+                                "customJointTextureLayouts": {
+                                    "items": {
+                                        "$ref": "#/definitions/ICustomJointTextureLayout"
+                                    },
+                                    "type": "array"
+                                },
+                                "customLayers": {
+                                    "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                "customPipeline": {
+                                    "type": "boolean"
+                                },
+                                "debug": {
+                                    "type": "boolean"
+                                },
+                                "designResolution": {
+                                    "$ref": "#/definitions/IDesignResolution"
+                                },
+                                "downloadMaxConcurrency": {
+                                    "type": "number"
+                                },
+                                "engineInfo": {
+                                    "$ref": "#/definitions/EngineInfo"
+                                },
+                                "engineModulesConfigKey": {
+                                    "type": "string"
+                                },
+                                "experimentalEraseModules": {
+                                    "type": "boolean"
+                                },
+                                "flags": {
+                                    "$ref": "#/definitions/IFlags"
+                                },
+                                "highQuality": {
+                                    "type": "boolean"
+                                },
+                                "includeModules": {
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "type": "array"
+                                },
+                                "inlineEnum": {
+                                    "type": "boolean"
+                                },
+                                "inlineSpriteFrames": {
+                                    "type": "boolean"
+                                },
+                                "logDest": {
+                                    "type": "string"
+                                },
+                                "macroConfig": {
+                                    "$ref": "#/definitions/Record<string,string|number|boolean>"
+                                },
+                                "macroCustom": {
+                                    "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "boolean"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                "mainBundleCompressionType": {
+                                    "$ref": "#/definitions/BundleCompressionType"
+                                },
+                                "mainBundleIsRemote": {
+                                    "type": "boolean"
+                                },
+                                "mangleProperties": {
+                                    "type": "boolean"
+                                },
+                                "md5Cache": {
+                                    "type": "boolean"
+                                },
+                                "moveRemoteBundleScript": {
+                                    "type": "boolean"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "nativeCodeBundleMode": {
+                                    "enum": [
+                                        "asmjs",
+                                        "both",
+                                        "wasm"
+                                    ],
+                                    "type": "string"
+                                },
+                                "nextStages": {
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "type": "array"
+                                },
+                                "outputName": {
+                                    "type": "string"
+                                },
+                                "overwriteProjectSettings": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "includeModules": {
+                                            "additionalProperties": {
+                                                "type": "string"
+                                            },
+                                            "properties": {
+                                                "gfx-webgl2": {
+                                                    "enum": [
+                                                        "inherit-project-setting",
+                                                        "off",
+                                                        "on"
+                                                    ],
+                                                    "type": "string"
+                                                },
+                                                "physics": {
+                                                    "type": "string"
+                                                },
+                                                "physics-2d": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "macroConfig": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "cleanupImageCache": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "packAutoAtlas": {
+                                    "type": "boolean"
+                                },
+                                "packages": {
+                                    "$ref": "#/definitions/Record<\"web-mobile\",IOptions>"
+                                },
+                                "physicsConfig": {
+                                    "$ref": "#/definitions/IPhysicsConfig"
+                                },
+                                "platform": {
+                                    "const": "web-mobile",
+                                    "type": "string"
+                                },
+                                "polyfills": {
+                                    "$ref": "#/definitions/IPolyFills"
+                                },
+                                "preview": {
+                                    "default": false,
+                                    "description": "是否是预览进程发送的构建请求。",
+                                    "type": "boolean"
+                                },
+                                "renderPipeline": {
+                                    "type": "string"
+                                },
+                                "scenes": {
+                                    "items": {
+                                        "$ref": "#/definitions/IBuildSceneItem"
+                                    },
+                                    "type": "array"
+                                },
+                                "server": {
+                                    "type": "string"
+                                },
+                                "skipCompressTexture": {
+                                    "type": "boolean"
+                                },
+                                "sortingLayers": {
+                                    "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "id": {
+                                                "type": "number"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                "sourceMaps": {
+                                    "enum": [
+                                        false,
+                                        "inline",
+                                        true
+                                    ]
+                                },
+                                "splashScreen": {
+                                    "$ref": "#/definitions/ISplashSetting"
+                                },
+                                "stage": {
+                                    "type": "string"
+                                },
+                                "startScene": {
+                                    "type": "string"
+                                },
+                                "startSceneAssetBundle": {
+                                    "type": "boolean"
+                                },
+                                "taskId": {
+                                    "type": "string"
+                                },
+                                "taskName": {
+                                    "type": "string"
+                                },
+                                "useCacheConfig": {
+                                    "$ref": "#/definitions/IBuildCacheUseConfig"
+                                },
+                                "useSplashScreen": {
+                                    "type": "boolean"
+                                },
+                                "wasmCompressionMode": {
+                                    "const": "brotli",
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
                     },
                     "type": "object"
                 },
-                "textureCompressConfig": {},
+                "textureCompressConfig": {
+                    "$ref": "#/definitions/UserCompressConfig"
+                },
                 "useCacheConfig": {
                     "$ref": "#/definitions/IBuildCacheUseConfig"
                 }
@@ -175,6 +742,56 @@
                 },
                 "splashScreen": {
                     "$ref": "#/definitions/ISplashSetting"
+                }
+            },
+            "type": "object"
+        },
+        "EngineInfo": {
+            "additionalProperties": false,
+            "properties": {
+                "native": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "builtin": {
+                            "type": "string"
+                        },
+                        "path": {
+                            "type": "string"
+                        },
+                        "type": {
+                            "enum": [
+                                "builtin",
+                                "custom"
+                            ],
+                            "type": "string"
+                        }
+                    },
+                    "type": "object"
+                },
+                "tmpDir": {
+                    "type": "string"
+                },
+                "typescript": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "builtin": {
+                            "type": "string"
+                        },
+                        "path": {
+                            "type": "string"
+                        },
+                        "type": {
+                            "enum": [
+                                "builtin",
+                                "custom"
+                            ],
+                            "type": "string"
+                        }
+                    },
+                    "type": "object"
+                },
+                "version": {
+                    "type": "string"
                 }
             },
             "type": "object"
@@ -330,6 +947,9 @@
                         }
                     },
                     "type": "object"
+                },
+                "packAutoAtlas": {
+                    "type": "boolean"
                 },
                 "platform": {
                     "$ref": "#/definitions/Platform"
@@ -496,6 +1116,50 @@
         "IFlags": {
             "additionalProperties": false,
             "type": "object"
+        },
+        "IOptions": {
+            "additionalProperties": false,
+            "properties": {
+                "resolution": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "designHeight": {
+                            "type": "number"
+                        },
+                        "designWidth": {
+                            "type": "number"
+                        }
+                    },
+                    "type": "object"
+                },
+                "useWebGPU": {
+                    "type": "boolean"
+                }
+            },
+            "type": "object"
+        },
+        "IOptions_1": {
+            "additionalProperties": false,
+            "properties": {
+                "embedWebDebugger": {
+                    "type": "boolean"
+                },
+                "orientation": {
+                    "$ref": "#/definitions/IOrientation"
+                },
+                "useWebGPU": {
+                    "type": "boolean"
+                }
+            },
+            "type": "object"
+        },
+        "IOrientation": {
+            "enum": [
+                "auto",
+                "landscape",
+                "portrait"
+            ],
+            "type": "string"
         },
         "IPhysicsConfig": {
             "additionalProperties": false,
@@ -695,13 +1359,57 @@
         },
         "Platform": {
             "enum": [
+                "alipay-mini-game",
+                "android",
+                "baidu-mini-game",
+                "bytedance-mini-game",
+                "cocos-play",
+                "google-play",
+                "harmonyos-next",
+                "honor-mini-game",
+                "huawei-agc",
+                "huawei-quick-game",
+                "ios",
+                "linux",
+                "mac",
+                "migu-mini-game",
+                "ohos",
+                "oppo-mini-game",
+                "taobao-creative-app",
+                "taobao-mini-game",
+                "vivo-mini-game",
                 "web-desktop",
                 "web-mobile",
-                "windows"
+                "wechatgame",
+                "wechatprogram",
+                "windows",
+                "xiaomi-quick-game"
             ],
             "type": "string"
         },
+        "Record<\"web-desktop\",IOptions>": {
+            "additionalProperties": false,
+            "properties": {
+                "web-desktop": {
+                    "$ref": "#/definitions/IOptions"
+                }
+            },
+            "type": "object"
+        },
+        "Record<\"web-mobile\",IOptions>": {
+            "additionalProperties": false,
+            "properties": {
+                "web-mobile": {
+                    "$ref": "#/definitions/IOptions_1"
+                }
+            },
+            "type": "object"
+        },
         "Record<string,IBundleOptions>": {
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "Record<string,ICustomConfig>": {
             "additionalProperties": false,
             "type": "object"
         },
@@ -711,6 +1419,32 @@
         },
         "Record<string,string|number|boolean>": {
             "additionalProperties": false,
+            "type": "object"
+        },
+        "Record<string,{name:string;options:Record<string,Record<string,{quality:string|number;}>>;overwrite?:Record<string,Record<string,{quality:string|number;}>>;}>": {
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "Record<string,{name:string;options:Record<string,Record<string,{quality:string|number;}>>;}>": {
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "UserCompressConfig": {
+            "additionalProperties": false,
+            "properties": {
+                "customConfigs": {
+                    "$ref": "#/definitions/Record<string,ICustomConfig>"
+                },
+                "defaultConfig": {
+                    "$ref": "#/definitions/Record<string,{name:string;options:Record<string,Record<string,{quality:string|number;}>>;}>"
+                },
+                "genMipmaps": {
+                    "type": "boolean"
+                },
+                "userPreset": {
+                    "$ref": "#/definitions/Record<string,{name:string;options:Record<string,Record<string,{quality:string|number;}>>;overwrite?:Record<string,Record<string,{quality:string|number;}>>;}>"
+                }
+            },
             "type": "object"
         }
     },
