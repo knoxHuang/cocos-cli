@@ -6,8 +6,8 @@ import { PackerDriver } from "../../scripting/packer-driver";
 
 import { Executor } from '@editor/lib-programming/dist/executor';
 import { QuickPackLoaderContext } from '@cocos/creator-programming-quick-pack/lib/loader';
-import { assetManager } from "../manager/asset";
 import { scriptConfig } from "../../scripting/shared/query-shared-settings";
+
 
 export const title = 'i18n:builder.tasks.load_script';
 
@@ -104,7 +104,7 @@ class ScriptManager {
                 console.error('Failed to init executor');
                 return;
             }
-            const pluginScripts = assetManager.querySortedPlugins({
+            const pluginScripts = (globalThis as any).assetManager.querySortedPlugins({
                 loadPluginInEditor: false,
             });
             executor.setPluginScripts(pluginScripts);

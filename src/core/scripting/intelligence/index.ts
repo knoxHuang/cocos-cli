@@ -3,8 +3,8 @@ import ps from 'path';
 import fs from 'fs-extra';
 import { getDatabaseModuleRootURL } from '../utils/db-module-url';
 import { StatsQuery } from '@cocos/ccbuild';
-import { assetDBManager } from '../../assets/manager/asset-db';
 import { configurationManager } from '../../configuration';
+import { IAssetDBInfo } from '../../assets/@types/private';
 import engine from '../../engine';
 
 export interface DbURLInfo { dbURL: string, target: string }
@@ -224,8 +224,9 @@ export class TypeScriptConfigBuilder {
 
     async getDbURLInfos(): Promise<DbURLInfo[]> {
         const infos: DbURLInfo[] = [];
-        const dbInfos = Object.values(assetDBManager.assetDBInfo);
-        for (const dbInfo of dbInfos) {
+        const dbInfos = (globalThis as any).assetDBManager.assetDBInfo as Record<string, IAssetDBInfo>;
+        const dbInfoValues = Object.values(dbInfos);
+        for (const dbInfo of dbInfoValues) {
             const dbURL = getDatabaseModuleRootURL(dbInfo.name);
             infos.push({
                 dbURL,
