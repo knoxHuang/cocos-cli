@@ -1,4 +1,4 @@
-import { IMigrationTarget } from './types';
+import { CocosCLIConfigScope, IMigrationTarget } from './types';
 import { CocosMigration } from './cocos-migration';
 import { newConsole } from '../../base/console';
 
@@ -28,24 +28,28 @@ function mergeConfigs(target: any, source: any): any {
  * CocosCreator 配置迁移管理器
  */
 export class CocosMigrationManager {
-    private static migrationTargets: IMigrationTarget[] = [];
+    private static _targets: Map<CocosCLIConfigScope, IMigrationTarget[]> = new Map();
+
+    /**
+     * 迁移器列表
+     */
+    public static get migrationTargets(): Map<CocosCLIConfigScope, IMigrationTarget[]> {
+        return this._targets;
+    }
 
     /**
      * 注册迁移器
      * @param migrationTarget 迁移器实例
      */
-    public static register(migrationTarget: IMigrationTarget): void {
-        this.migrationTargets.push(migrationTarget);
-        newConsole.debug(`[Migration] 已注册迁移插件: ${migrationTarget.pluginName}`);
-    }
-
-
-    /**
-     * 批量注册迁移器
-     * @param targets 迁移器数组
-     */
-    public static registerBatch(targets: IMigrationTarget[]): void {
-        targets.forEach(target => this.register(target));
+    public static register(migrationTarget: IMigrationTarget | IMigrationTarget[]): void {
+        migrationTarget = !Array.isArray(migrationTarget) ? [migrationTarget] : migrationTarget;
+        for (const target of migrationTarget) {
+            const scope = target.targetScope || 'project';
+            const items = this._targets.get(scope) || [];
+            items.push(target);
+            this._targets.set(scope, items);
+            newConsole.debug(`[Migration] 已注册迁移插件: ${target.pluginName}`);
+        }
     }
 
     /**
@@ -53,24 +57,26 @@ export class CocosMigrationManager {
      * @param projectPath 项目路径
      * @returns 迁移后的新配置
      */
-    public static async migrate(projectPath: string): Promise<Record<string, any>> {
-        if (this.migrationTargets.length === 0) {
+    public static async migrate(projectPath: string): Promise<Record<CocosCLIConfigScope, Record<string, any>>> {
+        const result: Record<CocosCLIConfigScope, Record<string, any>> = CocosMigrationManager.createConfigList();
+        if (this._targets.size === 0) {
             newConsole.warn('[Migration] 没有注册任何迁移器');
-            return {};
+            return result;
         }
 
-        newConsole.log(`[Migration] 开始执行 ${this.migrationTargets.length} 个迁移器`);
+        newConsole.log(`[Migration] 开始执行迁移`);
 
         // 执行所有注册的迁移
-        let result = {};
-        for (const target of this.migrationTargets) {
-            try {
-                const migratedConfig = await CocosMigration.migrate(projectPath, target);
-                result = mergeConfigs(result, migratedConfig);
-                newConsole.debug(`[Migration] 迁移完成: ${target.pluginName}`);
-            } catch (error) {
-                newConsole.error(`[Migration] 迁移失败: ${target.pluginName} - ${error}`);
-                throw error;
+        for (const items of this._targets.values()) {
+            for (const target of items) {
+                try {
+                    const targetScope = target.targetScope || 'project';
+                    const migratedConfig = await CocosMigration.migrate(projectPath, target);
+                    result[targetScope] = mergeConfigs(result[targetScope], migratedConfig);
+                    newConsole.debug(`[Migration] 迁移完成: ${target.pluginName}`);
+                } catch (error) {
+                    newConsole.error(`[Migration] 迁移失败: ${target.pluginName} - ${error}`);
+                }
             }
         }
 
@@ -78,23 +84,21 @@ export class CocosMigrationManager {
         return result;
     }
 
-
-    /**
-     * 获取已注册的迁移器数量
-     * @returns 迁移器数量
-     */
-    public static getRegisteredCount(): number {
-        return this.migrationTargets.length;
-    }
-
-
-
-
     /**
      * 清空所有迁移器
      */
     public static clear(): void {
-        this.migrationTargets.length = 0;
+        this._targets.clear();
         newConsole.debug('[Migration] 已清空所有迁移器');
+    }
+
+    /**
+     * 生成新的配置
+     * @private
+     */
+    private static createConfigList(): Record<CocosCLIConfigScope, Record<string, any>> {
+        return {
+            project: {},
+        };
     }
 }
