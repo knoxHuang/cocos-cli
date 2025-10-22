@@ -53,11 +53,19 @@ describe('CocosMigrationManager', () => {
     });
 
     describe('migrate', () => {
-        it('无注册迁移器时返回空对象并给出提示', async () => {
-            const res = await CocosMigrationManager.migrate('/path');
-            expect(res).toEqual({
-                project: {},
-            });
+        it('无注册迁移器时直接抛异常', async () => {
+            // 清空迁移器并阻止自动注册
+            CocosMigrationManager.clear();
+            // Mock registerMigration 方法使其不注册任何迁移器
+            const originalRegisterMigration = CocosMigrationManager['registerMigration'];
+            CocosMigrationManager['registerMigration'] = jest.fn().mockResolvedValue(undefined);
+
+            try {
+                await expect(CocosMigrationManager.migrate('/path')).rejects.toThrow('[Migration] 没有注册任何迁移器');
+            } finally {
+                // 恢复原始方法
+                CocosMigrationManager['registerMigration'] = originalRegisterMigration;
+            }
         });
 
         it('应按 scope 执行迁移并深度合并结果', async () => {
@@ -78,22 +86,31 @@ describe('CocosMigrationManager', () => {
                 migrate: async () => ({})
             };
 
-            CocosMigrationManager.register([t1, t2, t3]);
+            // Mock registerMigration to prevent clearing our custom migrations
+            const originalRegisterMigration = CocosMigrationManager['registerMigration'];
+            CocosMigrationManager['registerMigration'] = jest.fn().mockResolvedValue(undefined);
 
-            mockMigrate
-                .mockResolvedValueOnce({ a: { x: 1 }, p: 1 })
-                .mockResolvedValueOnce({ a: { y: 2 }, p: 2 })
-                .mockResolvedValueOnce({ g: { k: 3 } });
+            try {
+                CocosMigrationManager.register([t1, t2, t3]);
 
-            const res = await CocosMigrationManager.migrate('/proj');
+                mockMigrate
+                    .mockResolvedValueOnce({ a: { x: 1 }, p: 1 }) // t1
+                    .mockResolvedValueOnce({ a: { y: 2 }, p: 2 }) // t2
+                    .mockResolvedValueOnce({ g: { k: 3 } }); // t3
 
-            expect(mockMigrate).toHaveBeenCalledTimes(3);
-            expect(res).toEqual({
-                project: { a: { x: 1, y: 2 }, p: 2, g: { k: 3 } },
-            });
+                const res = await CocosMigrationManager.migrate('/proj');
+
+                expect(mockMigrate).toHaveBeenCalledTimes(3);
+                expect(res).toEqual({
+                    project: { a: { x: 1, y: 2 }, p: 2, g: { k: 3 } }
+                });
+            } finally {
+                // Restore original method
+                CocosMigrationManager['registerMigration'] = originalRegisterMigration;
+            }
         });
 
-        it('单个迁移器失败不影响整体，错误被记录', async () => {
+        it('单个迁移器失败直接抛异常', async () => {
             const t1: IMigrationTarget = {
                 sourceScope: 'project',
                 pluginName: 'ok',
@@ -108,12 +125,8 @@ describe('CocosMigrationManager', () => {
 
             mockMigrate
                 .mockResolvedValueOnce({ v: 1 })
-                .mockRejectedValueOnce(new Error('boom'));
-
-            const res = await CocosMigrationManager.migrate('/proj');
-            expect(res).toEqual({
-                project: { v: 1 },
-            });
+                .mockRejectedValueOnce(new Error('单个迁移器失败直接抛异常'));
+            await expect(CocosMigrationManager.migrate('/proj')).rejects.toThrow('[Migration] 迁移失败, 详情请查看日志');
         });
     });
 });
