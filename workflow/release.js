@@ -11,7 +11,7 @@ const { Command } = require('commander');
  */
 function parseArguments() {
     const program = new Command();
-    
+
     program
         .name('release')
         .description('Cocos CLI 发布工具')
@@ -23,10 +23,10 @@ function parseArguments() {
         .parse();
 
     const options = program.opts();
-    
+
     // 检查是否有任何参数被传递
     const hasAnyArgs = options.nodejs || options.electron || options.zip || options.upload;
-    
+
     // 如果没有任何参数，默认所有功能都启用
     if (!hasAnyArgs) {
         console.log('🚀 未指定参数，启用默认模式：构建所有平台 + ZIP打包 + FTP上传');
@@ -35,7 +35,7 @@ function parseArguments() {
             { type: 'electron', zip: true, upload: true }
         ];
     }
-    
+
     // 确定发布类型
     const types = [];
     if (options.nodejs) {
@@ -44,7 +44,7 @@ function parseArguments() {
     if (options.electron) {
         types.push('electron');
     }
-    
+
     if (types.length === 0) {
         console.error('❌ 请指定发布类型: --nodejs 或 --electron');
         program.help();
@@ -55,11 +55,11 @@ function parseArguments() {
      return types.map(type => {
          let zip = !!options.zip;
          const upload = !!options.upload;
-         
+
          if ((type === 'nodejs' || type === 'electron') && !options.zip && !options.upload) {
              zip = true;
          }
-         
+
          return {
              type: type,
              zip: zip,
@@ -81,10 +81,13 @@ async function getProjectVersion(rootDir) {
  * 生成发布目录名称
  */
 function generateReleaseDirectoryName(type, version) {
+
+    const platformSuffix = process.platform === 'darwin' ? 'darwin' : 'win';
+
     if (type === 'nodejs') {
-        return `cocos-cli-${version}`;
+        return `cocos-cli-${platformSuffix}-${version}`;
     } else if (type === 'electron') {
-        return `cocos-sdk-${version}`;
+        return `cocos-sdk-${platformSuffix}-${version}`;
     }
     throw new Error(`未知的发布类型: ${type}`);
 }
@@ -94,7 +97,7 @@ function generateReleaseDirectoryName(type, version) {
  */
 async function readIgnorePatterns(rootDir) {
     const vscodeignorePath = path.join(rootDir, '.vscodeignore');
-    
+
     console.log('📖 读取 .vscodeignore 文件...');
     let ignorePatterns = [];
     if (await fs.pathExists(vscodeignorePath)) {
@@ -107,7 +110,7 @@ async function readIgnorePatterns(rootDir) {
 
     // 添加一些默认的忽略模式
     ignorePatterns.push('.publish/**');
-    
+
     console.log('🚫 忽略模式:', ignorePatterns);
     return ignorePatterns;
 }
@@ -130,8 +133,8 @@ async function createReleaseDirectory(extensionDir) {
 async function installRootDependencies(rootDir) {
     console.log('📦 在根目录执行 npm install...');
     try {
-        execSync('npm install', { 
-            cwd: rootDir, 
+        execSync('npm install', {
+            cwd: rootDir,
             stdio: 'inherit',
             timeout: 300000 // 5分钟超时
         });
@@ -167,14 +170,14 @@ async function copyFilesToReleaseDirectory(rootDir, extensionDir, allFiles) {
     for (const file of allFiles) {
         const srcPath = path.join(rootDir, file);
         const destPath = path.join(extensionDir, file);
-        
+
         // 确保目标目录存在
         await fs.ensureDir(path.dirname(destPath));
-        
+
         // 拷贝文件
         await fs.copy(srcPath, destPath);
         copiedCount++;
-        
+
         if (copiedCount % 2000 === 0) {
             console.log(`📋 已拷贝 ${copiedCount}/${allFiles.length} 个文件...`);
         }
@@ -189,8 +192,8 @@ async function copyFilesToReleaseDirectory(rootDir, extensionDir, allFiles) {
 async function installProductionDependencies(extensionDir) {
     console.log('📦 在发布目录执行 npm install --production ...');
     try {
-        execSync('npm install --production', { 
-            cwd: extensionDir, 
+        execSync('npm install --production', {
+            cwd: extensionDir,
             stdio: 'inherit',
             timeout: 300000 // 5分钟超时
         });
@@ -207,8 +210,8 @@ async function installProductionDependencies(extensionDir) {
 async function rebuildElectronModules(extensionDir) {
     console.log('🔧 执行 Electron rebuild...');
     try {
-        execSync('npx electron@37.3.1 rebuild', { 
-            cwd: extensionDir, 
+        execSync('npx electron@37.3.1 rebuild', {
+            cwd: extensionDir,
             stdio: 'inherit',
             timeout: 600000 // 10分钟超时
         });
@@ -233,24 +236,24 @@ async function showReleaseStats(extensionDir) {
  */
 async function createZipPackage(extensionDir, releaseDirectoryName) {
     console.log('📦 创建ZIP压缩包...');
-    
+
     const zip = new JSZip();
     const zipFileName = `${releaseDirectoryName}.zip`;
     const zipFilePath = path.join(path.dirname(extensionDir), zipFileName);
-    
+
     // 递归添加文件到ZIP，排除.DS_Store文件
     async function addDirectoryToZip(dirPath, zipFolder = zip) {
         const items = await fs.readdir(dirPath);
-        
+
         for (const item of items) {
             // 排除macOS系统生成的.DS_Store文件
             if (item === '.DS_Store') {
                 continue;
             }
-            
+
             const itemPath = path.join(dirPath, item);
             const stats = await fs.stat(itemPath);
-            
+
             if (stats.isDirectory()) {
                 const folder = zipFolder.folder(item);
                 await addDirectoryToZip(itemPath, folder);
@@ -260,9 +263,9 @@ async function createZipPackage(extensionDir, releaseDirectoryName) {
             }
         }
     }
-    
+
     await addDirectoryToZip(extensionDir);
-    
+
     // 生成ZIP文件
     const zipContent = await zip.generateAsync({
         type: 'nodebuffer',
@@ -271,13 +274,13 @@ async function createZipPackage(extensionDir, releaseDirectoryName) {
             level: 6
         }
     });
-    
+
     await fs.writeFile(zipFilePath, zipContent);
-    
+
     const zipStats = await fs.stat(zipFilePath);
     console.log(`✅ ZIP压缩包创建完成: ${zipFileName}`);
     console.log(`📦 压缩包大小: ${formatBytes(zipStats.size)}`);
-    
+
     return zipFilePath;
 }
 
@@ -286,10 +289,10 @@ async function createZipPackage(extensionDir, releaseDirectoryName) {
  */
 async function uploadToFTP(filePath, ftpConfig) {
     console.log('🚀 开始上传到FTP服务器...');
-    
+
     const client = new Client();
     client.ftp.verbose = false; // 设置为true可以看到详细日志
-    
+
     try {
         // 连接到FTP服务器
         await client.access({
@@ -299,21 +302,21 @@ async function uploadToFTP(filePath, ftpConfig) {
             password: ftpConfig.password,
             secure: ftpConfig.secure || false
         });
-        
+
         console.log('✅ FTP连接成功');
-        
+
         // 如果指定了远程目录，切换到该目录
         if (ftpConfig.remoteDir) {
             await client.ensureDir(ftpConfig.remoteDir);
             await client.cd(ftpConfig.remoteDir);
         }
-        
+
         // 上传文件
         const fileName = path.basename(filePath);
         await client.uploadFrom(filePath, fileName);
-        
+
         console.log(`✅ 文件上传成功: ${fileName}`);
-        
+
     } catch (error) {
         console.error('❌ FTP上传失败:', error.message);
         throw error;
@@ -326,17 +329,17 @@ async function uploadToFTP(filePath, ftpConfig) {
  * 从环境变量获取FTP配置
  */
 function getFTPConfig() {
-    const ftpUser = process.env.FTP_USER;
-    const ftpPass = process.env.FTP_PASS;
-    const ftpHost = process.env.FTP_HOST || 'localhost';
+    const ftpUser = process.env.ORG_FTP_USER;
+    const ftpPass = process.env.ORG_FTP_PASS;
+    const ftpHost = process.env.FTP_HOST || 'ctc.upload.new1cloud.com';
     const ftpPort = process.env.FTP_PORT ? parseInt(process.env.FTP_PORT) : 21;
     const ftpSecure = process.env.FTP_SECURE === 'true';
-    const ftpRemoteDir = process.env.FTP_REMOTE_DIR;
-    
+    const ftpRemoteDir = process.env.FTP_REMOTE_DIR || '/CocosSDK/v1.0.0';
+
     if (!ftpUser || !ftpPass) {
         throw new Error('❌ 缺少FTP凭据: 请设置环境变量 FTP_USER 和 FTP_PASS');
     }
-    
+
     return {
         host: ftpHost,
         port: ftpPort,
@@ -353,7 +356,7 @@ function getFTPConfig() {
 async function handleFTPUpload(zipFilePath) {
     try {
         const ftpConfig = getFTPConfig();
-        
+
         if (zipFilePath) {
             // 上传ZIP文件
             await uploadToFTP(zipFilePath, ftpConfig);
@@ -373,20 +376,20 @@ async function release() {
     const configs = parseArguments();
     const rootDir = path.resolve(__dirname, '..');
     const publishDir = path.join(rootDir, '.publish');
-    
+
     try {
         // 获取项目版本号
         const version = await getProjectVersion(rootDir);
-        
+
         // 读取忽略模式（只需要读取一次）
         const ignorePatterns = await readIgnorePatterns(rootDir);
-        
+
         // 执行根目录的 npm install（只需要执行一次）
         await installRootDependencies(rootDir);
-        
+
         // 扫描项目文件（只需要扫描一次）
         const allFiles = await scanProjectFiles(rootDir, ignorePatterns);
-        
+
         // 为每个配置执行发布流程
         for (const options of configs) {
             await releaseForType(options, rootDir, publishDir, version, ignorePatterns, allFiles);
@@ -424,22 +427,22 @@ async function releaseForType(options, rootDir, publishDir, version, ignorePatte
 
     console.log('🎉 发布完成！');
     console.log(`📁 发布目录: ${extensionDir}`);
-    
+
     // 显示发布目录的大小信息
     await showReleaseStats(extensionDir);
 
     let zipFilePath = null;
-    
+
     // 如果指定了--zip参数，创建ZIP压缩包
     if (options.zip) {
         zipFilePath = await createZipPackage(extensionDir, releaseDirectoryName);
     }
-    
+
     // 如果指定了--upload参数，上传到FTP服务器
     if (options.upload) {
         await handleFTPUpload(zipFilePath);
     }
-    
+
     if (zipFilePath) {
         console.log(`📦 ZIP文件: ${zipFilePath}`);
     }
@@ -454,7 +457,7 @@ async function getDirectorySize(dirPath) {
 
     async function calculateSize(currentPath) {
         const stats = await fs.stat(currentPath);
-        
+
         if (stats.isDirectory()) {
             const files = await fs.readdir(currentPath);
             for (const file of files) {
