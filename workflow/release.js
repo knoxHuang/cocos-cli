@@ -2,9 +2,9 @@ const fs = require('fs-extra');
 const path = require('path');
 const { execSync } = require('child_process');
 const { globby } = require('globby');
-const JSZip = require('jszip');
 const { Client } = require('basic-ftp');
 const { Command } = require('commander');
+const { runCommand, create7ZipArchive, formatBytes } = require('./utils');
 
 /**
  * 解析命令行参数
@@ -83,12 +83,12 @@ async function getProjectVersion(rootDir) {
 function generateReleaseDirectoryName(type, version) {
 
     const platformSuffix = process.platform === 'darwin' ? 'mac' : 'win';
-    
+
     // 生成时间戳 (格式: YYMMDDHH)
     const now = new Date();
-    const timestamp = now.getFullYear().toString().slice(-2) + 
-                     (now.getMonth() + 1).toString().padStart(2, '0') + 
-                     now.getDate().toString().padStart(2, '0') + 
+    const timestamp = now.getFullYear().toString().slice(-2) +
+                     (now.getMonth() + 1).toString().padStart(2, '0') +
+                     now.getDate().toString().padStart(2, '0') +
                      now.getHours().toString().padStart(2, '0');
 
     if (type === 'nodejs') {
@@ -135,24 +135,6 @@ async function createReleaseDirectory(extensionDir) {
 }
 
 /**
- * 执行根目录的 npm install
- */
-async function installRootDependencies(rootDir) {
-    console.log('📦 在根目录执行 npm install...');
-    try {
-        execSync('npm install', {
-            cwd: rootDir,
-            stdio: 'inherit',
-            timeout: 300000 // 5分钟超时
-        });
-        console.log('✅ 根目录 npm install 完成');
-    } catch (error) {
-        console.error('❌ 根目录 npm install 失败:', error.message);
-        throw error;
-    }
-}
-
-/**
  * 扫描并获取需要拷贝的文件
  */
 async function scanProjectFiles(rootDir, ignorePatterns) {
@@ -191,24 +173,6 @@ async function copyFilesToReleaseDirectory(rootDir, extensionDir, allFiles) {
     }
 
     console.log(`✅ 成功拷贝 ${copiedCount} 个文件`);
-}
-
-/**
- * 在发布目录中安装生产依赖
- */
-async function installProductionDependencies(extensionDir) {
-    console.log('📦 在发布目录执行 npm install --production ...');
-    try {
-        execSync('npm install', {
-            cwd: extensionDir,
-            stdio: 'inherit',
-            timeout: 300000 // 5分钟超时
-        });
-        console.log('✅ 发布目录 npm install 完成');
-    } catch (error) {
-        console.error('❌ 发布目录 npm install 失败:', error.message);
-        throw error;
-    }
 }
 
 /**
@@ -255,8 +219,8 @@ async function findNativeBinaries(extensionDir) {
                 'mali_darwin/composite',
                 'mali_darwin/convert',
                 'mali_darwin/etcpack',
-                // 暂时排除 PVRTexTool，因为它使用了过旧的 SDK，无法通过公证
-                // 'PVRTexTool_darwin/PVRTexToolCLI',
+                'PVRTexTool_darwin/PVRTexToolCLI',
+                //todo:代码在中暂时不需要这个工具，先删掉
                 // 'PVRTexTool_darwin/compare'
             ], {
                 cwd: staticToolsPath,
@@ -357,7 +321,7 @@ async function signAndNotarizeNativeBinaries(extensionDir) {
         for (const binaryFile of binaryFiles) {
             try {
                 // 添加可执行权限 (chmod +x)
-                execSync(`chmod +x "${binaryFile}"`, { stdio: 'pipe' });
+                await runCommand('chmod', ['+x', binaryFile], { stdio: 'pipe' });
                 console.log(`✅ 已设置权限: ${path.relative(extensionDir, binaryFile)}`);
             } catch (error) {
                 console.warn(`⚠️  设置权限失败: ${path.relative(extensionDir, binaryFile)} - ${error.message}`);
@@ -384,16 +348,28 @@ async function signAndNotarizeNativeBinaries(extensionDir) {
         // 创建临时 ZIP 文件用于公证
         const tempZipPath = path.join(extensionDir, '..', 'temp-notarize.zip');
         try {
-            // 将所有原生二进制文件打包
-            const zip = new JSZip();
+            // 创建临时目录来存放要打包的文件
+            const tempDir = path.join(extensionDir, '..', 'temp-notarize-files');
+            await fs.ensureDir(tempDir);
+            
+            // 复制所有原生二进制文件到临时目录
             for (const binaryFile of binaryFiles) {
                 const relativePath = path.relative(extensionDir, binaryFile);
-                const fileContent = await fs.readFile(binaryFile);
-                zip.file(relativePath, fileContent);
+                const targetPath = path.join(tempDir, relativePath);
+                await fs.ensureDir(path.dirname(targetPath));
+                await fs.copy(binaryFile, targetPath);
             }
 
-            const zipContent = await zip.generateAsync({ type: 'nodebuffer' });
-            await fs.writeFile(tempZipPath, zipContent);
+            // 使用 7zip 创建压缩包
+            await create7ZipArchive(tempDir, tempZipPath, {
+                compressionLevel: 9,
+                format: 'zip',
+                exclude: ['*.DS_Store'],
+                preserveSymlinks: true
+            });
+
+            // 清理临时目录
+            await fs.remove(tempDir);
 
             // 提交公证
             console.log('📤 提交公证请求...');
@@ -426,24 +402,6 @@ async function signAndNotarizeNativeBinaries(extensionDir) {
 }
 
 /**
- * 执行 Electron rebuild（仅用于 electron 版本）
- */
-async function rebuildElectronModules(extensionDir) {
-    console.log('🔧 执行 Electron rebuild...');
-    try {
-        execSync('npm run rebuild', {
-            cwd: extensionDir,
-            stdio: 'inherit',
-            timeout: 600000 // 10分钟超时
-        });
-        console.log('✅ Electron rebuild 完成');
-    } catch (error) {
-        console.error('❌ Electron rebuild 失败:', error.message);
-        throw error;
-    }
-}
-
-/**
  * 显示发布统计信息
  */
 async function showReleaseStats(extensionDir) {
@@ -460,118 +418,23 @@ async function createZipPackage(extensionDir, releaseDirectoryName) {
 
     const zipFileName = `${releaseDirectoryName}.zip`;
     const zipFilePath = path.join(path.dirname(extensionDir), zipFileName);
-    const parentDir = path.dirname(extensionDir);
-    const dirName = path.basename(extensionDir);
 
     try {
-        // 删除现有的ZIP文件（如果存在）
-        if (await fs.pathExists(zipFilePath)) {
-            console.log(`删除现有ZIP文件: ${zipFileName}`);
-            await fs.remove(zipFilePath);
-        }
-
-        const isWindows = process.platform === 'win32';
-
-        if (isWindows) {
-            // Windows: 直接使用 JSZip 方法（已验证可用）
-            console.log('🔧 Windows 系统，使用 JSZip 方式压缩...');
-            return await createZipPackageWithJSZip(extensionDir, releaseDirectoryName, zipFilePath);
-        }
-
-        // Unix/Linux/macOS: 使用 zip 命令来保持文件权限和软链接
-        // -r: 递归压缩目录
-        // -y: 保留软链接（symlinks）
-        // -x: 排除 .DS_Store 文件
-        const zipCommand = `cd "${parentDir}" && zip -ry "${zipFileName}" "${dirName}" -x "*.DS_Store"`;
-
-        console.log(`🔧 执行压缩命令 (${isWindows ? 'Windows' : 'Unix'})...`);
-        console.log(`📁 压缩目录: ${dirName}`);
-        console.log(`⏱️  大文件压缩中，请耐心等待...`);
-
-        execSync(zipCommand, {
-            stdio: 'pipe',
-            timeout: 1800000, // 30分钟超时（大文件需要更长时间）
-            maxBuffer: 1024 * 1024 * 100 // 100MB buffer
+        // 使用 7zip-bin 创建压缩包，支持跨平台且保留文件权限和软链接
+        return await create7ZipArchive(extensionDir, zipFilePath, {
+            compressionLevel: 9,
+            format: 'zip',
+            exclude: ['*.DS_Store', '*.Thumbs.db'],
+            preserveSymlinks: true,
+            timeout: 1800000 // 30分钟超时
         });
-
-        const zipStats = await fs.stat(zipFilePath);
-        console.log(`✅ ZIP压缩包创建完成: ${zipFileName}`);
-        console.log(`📦 压缩包大小: ${formatBytes(zipStats.size)}`);
-
-        return zipFilePath;
     } catch (error) {
-        console.error('❌ ZIP压缩包创建失败:', error.message);
-
-        // 检查是否是超时错误
-        if (error.message.includes('timeout') || error.code === 'ETIMEDOUT') {
-            console.error('⏰ 压缩超时，可能是文件太大。建议手动压缩或减少文件大小。');
-        }
-
-        // 如果系统命令失败，回退到 JSZip
-        console.log('⚠️  回退到 JSZip 方式（注意：在非 Windows 系统上会丢失文件权限）');
-        return await createZipPackageWithJSZip(extensionDir, releaseDirectoryName, zipFilePath);
+        console.error('❌ 7zip 压缩包创建失败:', error.message);
+        throw error;
     }
 }
 
-/**
- * 使用 JSZip 创建压缩包（备用方案，会丢失文件权限）
- */
-async function createZipPackageWithJSZip(extensionDir, releaseDirectoryName, zipFilePath) {
-    const zip = new JSZip();
 
-    // 递归添加文件到ZIP，排除.DS_Store文件，正确处理软链接
-    async function addDirectoryToZip(dirPath, zipFolder = zip) {
-        const items = await fs.readdir(dirPath);
-
-        for (const item of items) {
-            // 排除macOS系统生成的.DS_Store文件
-            if (item === '.DS_Store') {
-                continue;
-            }
-
-            const itemPath = path.join(dirPath, item);
-            // 使用 lstat 而不是 stat 来正确检测软链接
-            const stats = await fs.lstat(itemPath);
-
-            if (stats.isSymbolicLink()) {
-                // 处理软链接：读取链接目标并保存为软链接
-                const linkTarget = await fs.readlink(itemPath);
-                const file = zipFolder.file(item, linkTarget);
-                // 设置软链接权限 (0o120000 | 0o755)
-                file.unixPermissions = 0o120755;
-                console.log(`📎 添加软链接: ${item} -> ${linkTarget}`);
-            } else if (stats.isDirectory()) {
-                const folder = zipFolder.folder(item);
-                await addDirectoryToZip(itemPath, folder);
-            } else {
-                // 普通文件：保留文件权限
-                const content = await fs.readFile(itemPath);
-                const file = zipFolder.file(item, content);
-                // 保留原始文件权限
-                file.unixPermissions = stats.mode;
-            }
-        }
-    }
-
-    await addDirectoryToZip(extensionDir);
-
-    // 生成ZIP文件
-    const zipContent = await zip.generateAsync({
-        type: 'nodebuffer',
-        compression: 'DEFLATE',
-        compressionOptions: {
-            level: 6
-        }
-    });
-
-    await fs.writeFile(zipFilePath, zipContent);
-
-    const zipStats = await fs.stat(zipFilePath);
-    console.log(`✅ ZIP压缩包创建完成: ${path.basename(zipFilePath)}`);
-    console.log(`📦 压缩包大小: ${formatBytes(zipStats.size)}`);
-
-    return zipFilePath;
-}
 
 /**
  * 上传文件到FTP服务器
@@ -670,18 +533,21 @@ async function release() {
         // 获取项目版本号
         const version = await getProjectVersion(rootDir);
 
+        // 拉取最新的 engine 代码（只需要执行一次）
+        await runCommand('npm', ['run', 'update:repos'], { cwd: rootDir });
+
         // 读取忽略模式（只需要读取一次）
         const ignorePatterns = await readIgnorePatterns(rootDir);
 
         // 执行根目录的 npm install（只需要执行一次）
-        await installRootDependencies(rootDir);
+        await runCommand('npm', ['install'], { cwd: rootDir });
 
         // 扫描项目文件（只需要扫描一次）
         const allFiles = await scanProjectFiles(rootDir, ignorePatterns);
 
         // 为每个配置执行发布流程
         for (const options of configs) {
-            await releaseForType(options, rootDir, publishDir, version, ignorePatterns, allFiles);
+            await releaseForType(options, rootDir, publishDir, version, allFiles);
         }
 
     } catch (error) {
@@ -693,7 +559,7 @@ async function release() {
 /**
  * 为特定类型执行发布流程
  */
-async function releaseForType(options, rootDir, publishDir, version, ignorePatterns, allFiles) {
+async function releaseForType(options, rootDir, publishDir, version, allFiles) {
     // 生成发布目录名称
     const releaseDirectoryName = generateReleaseDirectoryName(options.type, version);
     const extensionDir = path.join(publishDir, releaseDirectoryName);
@@ -706,13 +572,12 @@ async function releaseForType(options, rootDir, publishDir, version, ignorePatte
     // 步骤 2: 拷贝文件
     await copyFilesToReleaseDirectory(rootDir, extensionDir, allFiles);
 
-    // 步骤 3: 安装生产依赖(现在因为直接拷贝了 node_modules 所以暂时注释掉)
-    // await installProductionDependencies(extensionDir);
+    // 步骤 3: 安装生产依赖
+    await runCommand('npm', ['install', '--production'], { cwd: extensionDir });
+    await runCommand('npm', ['install', '--production', '--ignore-scripts'], { cwd: path.join(extensionDir, 'packages/engine') });
 
     // 步骤 4: 如果是 electron 版本，执行 electron rebuild
-    if (options.type === 'electron') {
-        await rebuildElectronModules(extensionDir);
-    }
+    options.type === 'electron' && (await runCommand('npm', ['run', 'electron-rebuild'], { cwd: extensionDir }));
 
     // 步骤 5: 对原生二进制文件进行签名和公证（仅限 macOS）
     await signAndNotarizeNativeBinaries(extensionDir);
@@ -767,16 +632,7 @@ async function getDirectorySize(dirPath) {
     return { size: totalSize, files: fileCount };
 }
 
-/**
- * 格式化字节大小
- */
-function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
+
 
 // 如果直接运行此脚本，则执行发布
 if (require.main === module) {
