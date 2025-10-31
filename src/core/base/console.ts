@@ -1,8 +1,7 @@
-import { existsSync } from 'fs';
-import { appendFile, outputFileSync, readdir, remove } from 'fs-extra';
-import { basename } from 'path';
+import { basename, join } from 'path';
 import { consola, type ConsolaInstance } from 'consola';
-import ora, { type Ora } from 'ora';
+import type { Ora } from 'ora';
+import pino from 'pino';
 import i18n from './i18n';
 export type IConsoleType = 'log' | 'warn' | 'error' | 'debug' | 'info' | 'success' | 'ready' | 'start';
 
@@ -30,6 +29,11 @@ export class NewConsole {
     private memoryTrackMap: Map<string, number> = new Map();
     private trackTimeStartMap: Map<string, number> = new Map();
     private consola: ConsolaInstance;
+    private pino: pino.Logger = pino({
+        level: process.env.DEBUG === 'true' || process.argv.includes('--debug')
+            ? 'debug' : 'info', // Set log level
+    });
+    private cacheLogs = true;
     private isVerbose: boolean = false;
 
     // 进度管理相关
@@ -61,7 +65,7 @@ export class NewConsole {
         this.isVerbose = process.env.DEBUG === 'true' || process.argv.includes('--debug');
     }
 
-    public init(logDest: string) {
+    public init(logDest: string, cacheLogs = false) {
         if (this._init) {
             return;
         }
@@ -75,26 +79,21 @@ export class NewConsole {
         }
         // @ts-ignore 手动继承 console
         this.__proto__.__proto__ = rawConsole;
-        this.initLogFiles(logDest);
-        this._init = true;
-    }
 
-    public initLogFiles(logDest: string) {
         this.logDest = logDest;
-        try {
-            if (!existsSync(this.logDest)) {
-                // 每次设置 id 的时候，初始化任务的 log 信息，注意顺序
-                outputFileSync(this.logDest, '');
-            }
-        } catch (error) {
-            console.debug(error);
-        }
+        this.cacheLogs = cacheLogs;
+
+        this._init = true;
     }
 
     /**
      * 开始记录资源导入日志
      * */
     public record(logDest?: string) {
+        if (this._start) {
+            console.warn('Console is already recording logs.');
+            return;
+        }
         logDest && (this.logDest = logDest);
         if (!this.logDest) {
             console.error('logDest is required');
@@ -106,7 +105,39 @@ export class NewConsole {
             globalThis.console.switchConsole(this);
             return;
         }
+
+        this.pino.flush(); // Finish previous writes
+
+        // Reset pino using new log destination
+        this.pino = pino({
+            level: process.env.DEBUG === 'true' || process.argv.includes('--debug')
+                ? 'debug' : 'info', // Set log level
+            transport: {
+                targets: [
+                    {
+                        target: 'pino-transport-rotating-file',
+                        options: {
+                            dir: this.logDest,
+                            filename: 'app',
+                            enabled: true,
+                            size: '1M',
+                            interval: '1d',
+                            compress: true,
+                            immutable: true,
+                            retentionDays: 30,
+                            compressionOptions: { level: 6, strategy: 0 },
+                            errorLogFile: join(this.logDest, 'errors.log'),
+                            timestampFormat: 'iso',
+                            skipPretty: false,
+                            errorFlushIntervalMs: 1000,
+                        },
+                    }
+                ],
+            }
+        });
+
         this._start = true;
+
         // @ts-ignore 将处理过的继承自 console 的新对象赋给 windows
         globalThis.console = this;
         rawConsole.debug(`Start record asset-db log in {file(${this.logDest})}`);
@@ -116,6 +147,10 @@ export class NewConsole {
      * 停止记录
      */
     public stopRecord() {
+        if (!this._start) {
+            console.warn('Console is not recording logs.');
+            return;
+        }
         rawConsole.debug(`Stop record asset-db log. {file(${this.logDest})}`);
         // @ts-ignore 将处理过的继承自 console 的新对象赋给 windows
         globalThis.console = rawConsole;
@@ -261,12 +296,38 @@ export class NewConsole {
         this.lastPrintMessage = message;
         this.lastPrintTime = now;
         this.consola[type](message);
+        switch (type) {
+            case 'debug':
+                this.pino.debug(message);
+                break;
+            case 'log':
+                this.pino.info(message);
+                break;
+            case 'warn':
+                this.pino.warn(message);
+                break;
+            case 'error':
+                this.pino.error(message);
+                break;
+            case 'info':
+                this.pino.info(message);
+                break;
+            case 'success':
+                this.pino.info(message);
+                break;
+            case 'ready':
+                this.pino.info(message);
+                break;
+            case 'start':
+                this.pino.info(message);
+                break;
+        }
     }
 
     /**
      * 开始进度模式
      */
-    public startProgress(initialMessage: string = 'Processing...') {
+    public startProgress(_initialMessage: string = 'Processing...') {
         // this.progressMode = true;
         // this.lastProgressMessage = initialMessage;
 
@@ -332,23 +393,9 @@ export class NewConsole {
         if (!this._start || !this.messages.length) {
             return;
         }
-
-        const msgInfo = this.messages.shift();
-        await this.saveLog(msgInfo!.type, msgInfo!.value);
-    }
-
-    /**
-     * 收集日志
-     * @param type 日志类型
-     * @param info 日志内容
-     */
-    private async saveLog(type: IConsoleType, info: any[] | string) {
-        if (!info || !existsSync(this.logDest)) {
-            return;
+        if (!this.cacheLogs) {
+            this.messages.shift(); // pop first message
         }
-
-        const content = `${getRealTime()}-${type}: ${translate(info)}\n`;
-        appendFile(this.logDest, content);
     }
 
     trackMemoryStart(name: string) {
@@ -357,7 +404,7 @@ export class NewConsole {
         return heapUsed;
     }
 
-    trackMemoryEnd(name: string, output = true) {
+    trackMemoryEnd(name: string, _output = true) {
         // TODO test
         // const start = this.memoryTrackMap.get(name);
         // if (!start) {
@@ -494,6 +541,27 @@ export class NewConsole {
             this.error(`❌ ${taskName} failed`);
         }
     }
+
+    // --------------------- Query logs -------------------------
+    /**
+     * 获取最近的日志信息
+     */
+    public queryLogs(count: number, type?: IConsoleType): string[] {
+        const messages: string[] = [];
+        for (let i = this.messages.length - 1; i >= 0 && count > 0; --i) {
+            const msg = this.messages[i];
+            if (!type || msg.type === type) {
+                if (type) {
+                    messages.push(`${translate(msg.value)}`);
+                } else {
+                    messages.push(`[${msg.type.toUpperCase()}] ${translate(msg.value)}`);
+                }
+                --count;
+            }
+        }
+        messages.reverse();
+        return messages;
+    }
 }
 
 export function formateBytes(bytes: number) {
@@ -532,8 +600,9 @@ function translate(msg: any): string {
                 return translate(msg.stack);
             }
             return JSON.stringify(msg);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-
+            // noop
         }
     }
     return msg && msg.toString && msg.toString();
