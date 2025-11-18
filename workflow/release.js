@@ -57,16 +57,11 @@ function parseArguments() {
 
     // 为每个类型创建配置
      const configs = types.map(type => {
-         let zip = !!options.zip;
          const upload = !!options.upload;
-
-         if ((type === 'nodejs' || type === 'electron') && !options.zip && !options.upload) {
-             zip = true;
-         }
 
          return {
              type: type,
-             zip: zip,
+             zip: true,
              upload: upload
          };
      });
@@ -360,7 +355,7 @@ async function signAndNotarizeNativeBinaries(extensionDir) {
             // 创建临时目录来存放要打包的文件
             const tempDir = path.join(extensionDir, '..', 'temp-notarize-files');
             await fs.ensureDir(tempDir);
-            
+
             // 复制所有原生二进制文件到临时目录
             for (const binaryFile of binaryFiles) {
                 const relativePath = path.relative(extensionDir, binaryFile);
@@ -479,7 +474,11 @@ async function uploadToFTP(filePath, ftpConfig) {
         const fileName = path.basename(filePath);
         await client.uploadFrom(filePath, fileName);
 
-        console.log(`✅ 文件上传成功: ${fileName}`);
+        const downloadBase = process.env.DOWNLOAD_BASE_URL || 'https://download.cocos.org';
+        const remoteDir = ftpConfig.remoteDir || '';
+        const prefix = remoteDir.startsWith('/') ? '' : '/';
+        const downloadUrl = `${downloadBase}${prefix}${remoteDir}/${fileName}`;
+        console.log(`✅ 文件上传成功: ${downloadUrl}`);
 
     } catch (error) {
         console.error('❌ FTP上传失败:', error.message);
@@ -492,13 +491,14 @@ async function uploadToFTP(filePath, ftpConfig) {
 /**
  * 从环境变量获取FTP配置
  */
-function getFTPConfig() {
+function getFTPConfig(rootDir, type) {
     const ftpUser = process.env.ORG_FTP_USER;
     const ftpPass = process.env.ORG_FTP_PASS;
     const ftpHost = process.env.FTP_HOST || 'ctc.upload.new1cloud.com';
     const ftpPort = process.env.FTP_PORT ? parseInt(process.env.FTP_PORT) : 21;
     const ftpSecure = process.env.FTP_SECURE === 'true';
-    const ftpRemoteDir = process.env.FTP_REMOTE_DIR || '/CocosSDK/v1.0.0';
+    const defaultRemoteDir = (type === 'electron') ? `/pink/` : `/CocosSDK/`;
+    const ftpRemoteDir = process.env.FTP_REMOTE_DIR || defaultRemoteDir;
 
     if (!ftpUser || !ftpPass) {
         throw new Error('❌ 缺少FTP凭据: 请设置环境变量 FTP_USER 和 FTP_PASS');
@@ -517,9 +517,9 @@ function getFTPConfig() {
 /**
  * 处理FTP上传逻辑
  */
-async function handleFTPUpload(zipFilePath) {
+async function handleFTPUpload(zipFilePath, rootDir, type) {
     try {
-        const ftpConfig = getFTPConfig();
+        const ftpConfig = getFTPConfig(rootDir, type);
 
         if (zipFilePath) {
             // 上传ZIP文件
@@ -543,9 +543,9 @@ async function handleFTPUpload(zipFilePath) {
 async function release(options = {}) {
     const rootDir = path.resolve(__dirname, '..');
     let configs;
-    
+
     let parsedArgs = null;
-    
+
     // 如果提供了完整的配置，使用它；否则解析命令行参数
     if (options.configs && Array.isArray(options.configs) && options.configs.length > 0) {
         // 作为模块调用，使用提供的配置
@@ -555,15 +555,15 @@ async function release(options = {}) {
         parsedArgs = parseArguments();
         configs = parsedArgs.configs;
     }
-    
+
     // 确定发布目录：优先使用函数参数，其次是命令行参数，最后是默认值
     const publishDirInput = options.publishDir || (parsedArgs && parsedArgs.publishDir) || '.publish';
-    
+
     // 将发布目录转换为绝对路径
-    const publishDirAbs = path.isAbsolute(publishDirInput) 
-        ? publishDirInput 
+    const publishDirAbs = path.isAbsolute(publishDirInput)
+        ? publishDirInput
         : path.resolve(rootDir, publishDirInput);
-    
+
     // 确保发布目录存在
     await fs.ensureDir(publishDirAbs);
     console.log(`📁 使用发布目录: ${publishDirAbs}`);
@@ -648,7 +648,7 @@ async function releaseForType(options, rootDir, publishDir, version, allFiles) {
 
     // 如果指定了--upload参数，上传到FTP服务器
     if (options.upload) {
-        await handleFTPUpload(zipFilePath);
+        await handleFTPUpload(zipFilePath, rootDir, options.type);
     }
 
     if (zipFilePath) {
