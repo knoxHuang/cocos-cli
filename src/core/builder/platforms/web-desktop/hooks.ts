@@ -3,7 +3,7 @@
 import { copyFileSync, existsSync, outputFileSync } from 'fs-extra';
 import { basename, join, relative } from 'path';
 import Ejs from 'ejs';
-import { InternalBuildResult, BuilderAssetCache, IBuilder, IBuildTaskOption, IInternalBuildOptions } from '../../@types/protected';
+import { InternalBuildResult, BuilderAssetCache, IBuilder, IBuildTaskOption, IInternalBuildOptions, IBuildStageTask } from '../../@types/protected';
 import { IBuildResult } from './type';
 import { relativeUrl, transformCode } from '../../worker/builder/utils';
 import * as commonUtils from '../web-common/utils';
@@ -97,12 +97,21 @@ export async function onBeforeCopyBuildTemplate(this: IBuilder, options: IIntern
     // 入口文件排除 md5 写入
     options.md5CacheOptions.replaceOnly.push('index.html');
 }
-export async function onAfterBuild(options: IInternalBuildOptions<'web-desktop'>, result: InternalBuildResult) {
+export async function onAfterBuild(this: IBuilder, options: IInternalBuildOptions<'web-desktop'>, result: InternalBuildResult) {
     // 放在最后处理 url ，否则会破坏 md5 的处理
     result.settings.plugins.jsList.forEach((url: string, i: number) => {
         result.settings.plugins.jsList[i] = url.split('/').map(encodeURIComponent).join('/');
     });
     outputFileSync(result.paths.settings, JSON.stringify(result.settings, null, options.debug ? 4 : 0));
+    const previewUrl = await commonUtils.getPreviewUrl(result.paths.dir);
+    this.buildExitRes.custom = {
+        previewUrl,
+    };
 }
 
-export const run = commonUtils.run;
+export async function run(this: IBuildStageTask, root: string) {
+    const previewUrl = await commonUtils.run(root);
+    this.buildExitRes.custom = {
+        previewUrl,
+    };
+};
