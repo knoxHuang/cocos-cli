@@ -18,6 +18,9 @@ export interface AssetManagerEvents {
     'asset-add': (asset: IAsset) => void;
     'asset-change': (asset: IAsset) => void;
     'asset-delete': (asset: IAsset) => void;
+    'onAssetAdded': (info: IAssetInfo) => void;
+    'onAssetChanged': (info: IAssetInfo) => void;
+    'onAssetRemoved': (info: IAssetInfo) => void;
 }
 
 export * from '../public';
