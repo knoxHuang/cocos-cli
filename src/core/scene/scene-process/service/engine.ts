@@ -5,13 +5,16 @@ import { Component, director, GeometryRenderer as CCGeometryRenderer, Node } fro
 import { GeometryRenderer, methods as GeometryMethods } from './engine/geometry_renderer';
 import { BaseService, register } from './core';
 import { Service } from './core/decorator';
-import { IEngineEvents, IEngineService } from '../../common';
+import { ICustomLayerConfig, IEngineEvents, IEngineService } from '../../common';
 import { NodeEventType } from '../../common';
 import { Rpc } from '../rpc';
 
 const tickTime = 1000 / 60;
+// Engine Layers reserves bits 20-31 for built-ins; user custom layers live in bit positions 0-19.
+const USER_LAYER_MIN_BIT = 0;
+const USER_LAYER_MAX_BIT = 19;
 const layerMask: number[] = [];
-for (let i = 0; i <= 19; i++) {
+for (let i = USER_LAYER_MIN_BIT; i <= USER_LAYER_MAX_BIT; i++) {
     layerMask[i] = 1 << i;
 }
 
@@ -84,12 +87,12 @@ export class EngineService extends BaseService<IEngineEvents> implements IEngine
         }
     }
 
-    public async initCustomLayer(layers?: { name: string; value: number }[]) {
+    public async initCustomLayer(layers?: ICustomLayerConfig[]) {
         if (!Array.isArray(layers)) {
             return;
         }
 
-        for (let i = 0; i <= 19; i++) {
+        for (let i = USER_LAYER_MIN_BIT; i <= USER_LAYER_MAX_BIT; i++) {
             cc.Layers.deleteLayer(i);
         }
 
