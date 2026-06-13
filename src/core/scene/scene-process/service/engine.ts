@@ -5,7 +5,7 @@ import { Component, director, GeometryRenderer as CCGeometryRenderer, Node } fro
 import { GeometryRenderer, methods as GeometryMethods } from './engine/geometry_renderer';
 import { BaseService, register } from './core';
 import { Service } from './core/decorator';
-import { ICustomLayerConfig, IEngineEvents, IEngineService } from '../../common';
+import type { ICustomLayerConfig, IEngineEvents, IEngineService } from '../../common';
 import { NodeEventType } from '../../common';
 import { Rpc } from '../rpc';
 

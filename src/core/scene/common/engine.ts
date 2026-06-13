@@ -1,4 +1,4 @@
-import { IServiceEvents } from '../scene-process/service/core';
+import type { IServiceEvents } from '../scene-process/service/core';
 
 export interface ICustomLayerConfig {
     name: string;
