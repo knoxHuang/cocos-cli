@@ -10,6 +10,10 @@ import { NodeEventType } from '../../common';
 import { Rpc } from '../rpc';
 
 const tickTime = 1000 / 60;
+const layerMask: number[] = [];
+for (let i = 0; i <= 19; i++) {
+    layerMask[i] = 1 << i;
+}
 
 // 与 cocos-editor 一致：控制连续 tick 的状态枚举
 enum NeedAnimState {
@@ -78,6 +82,23 @@ export class EngineService extends BaseService<IEngineEvents> implements IEngine
         if (this._tickedFrameInEM !== director.getTotalFrames()) {
             this._shouldRepaintInEM = true;
         }
+    }
+
+    public async initCustomLayer(layers?: { name: string; value: number }[]) {
+        if (!Array.isArray(layers)) {
+            return;
+        }
+
+        for (let i = 0; i <= 19; i++) {
+            cc.Layers.deleteLayer(i);
+        }
+
+        layers.forEach((layer) => {
+            const index = layerMask.findIndex((num) => layer.value === num);
+            if (index !== -1) {
+                cc.Layers.addLayer(layer.name, index);
+            }
+        });
     }
 
     public setFrameRate(fps: number) {
