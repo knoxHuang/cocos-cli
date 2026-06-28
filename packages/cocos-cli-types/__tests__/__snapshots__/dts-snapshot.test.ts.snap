@@ -5604,17 +5604,44 @@ export declare type IAnimationOperation = {
     clipUuid: string;
     wrapMode: number;
 } | {
+    type: 'addPropertyCurve';
+    clipUuid: string;
+    nodePath?: string;
+    nodeUuid?: string;
+    propKey: string;
+    value?: IAnimationValue;
+} | {
     type: 'createPropertyKey';
     clipUuid: string;
     nodePath?: string;
     nodeUuid?: string;
     propKey: string;
     frame: number;
-    value: IAnimationValue;
+    value?: IAnimationValue;
     channel?: string;
     keyData?: IAnimationCurveKeyData;
+    curveData?: IAnimationCurveKeyData;
+} | {
+    type: 'updatePropertyKey';
+    clipUuid: string;
+    nodePath?: string;
+    nodeUuid?: string;
+    propKey: string;
+    frame: number;
+    value?: IAnimationValue;
+    channel?: string;
+    keyData?: IAnimationCurveKeyData;
+    curveData?: IAnimationCurveKeyData;
 } | {
     type: 'removePropertyKey';
+    clipUuid: string;
+    nodePath?: string;
+    nodeUuid?: string;
+    propKey: string;
+    frames: number[];
+    channel?: string;
+} | {
+    type: 'removePropertyKeys';
     clipUuid: string;
     nodePath?: string;
     nodeUuid?: string;
@@ -5630,6 +5657,23 @@ export declare type IAnimationOperation = {
     frames: number[];
     offset: number;
     channel?: string;
+} | {
+    type: 'copyPropertyKeysTo';
+    clipUuid: string;
+    nodePath?: string;
+    nodeUuid?: string;
+    propKey: string;
+    frames: number[];
+    dstFrame: number;
+    channel?: string;
+} | {
+    type: 'setPropertyCurveExtrapolation';
+    clipUuid: string;
+    nodePath?: string;
+    nodeUuid?: string;
+    propKey: string;
+    preExtrap?: number;
+    postExtrap?: number;
 } | {
     type: 'addEvent';
     clipUuid: string;
