@@ -424,7 +424,8 @@ export async function decodePatch(path: string, dump: any, node: any) {
     }
 
     if (data instanceof Component && forbidUserChanges.includes(info.key)) {
-        throw new Error(`Failed to decodePatch: Property(${info.key}) modification not allowed`);
+        // throw new Error(`Failed to decodePatch: Property(${info.key}) modification not allowed`);
+        return;
     }
 
     if (Object.prototype.toString.call(data) === '[object Object]') {

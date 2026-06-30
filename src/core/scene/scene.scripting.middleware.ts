@@ -6,6 +6,18 @@ import { pathExists, stat } from 'fs-extra';
 import { GlobalPaths } from '../../global';
 import { readFileSync } from 'fs';
 
+function sendFileFromRoot(res: Response, root: string, filePath: string) {
+    const relativePath = path.relative(root, filePath);
+    if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+        res.sendStatus(403);
+        return;
+    }
+
+    // Keep hidden parent dirs such as `.temp` outside Express' dotfile check,
+    // while preserving the default protection for dotfiles inside the served root.
+    res.sendFile(relativePath, { root });
+}
+
 export default {
     get: [
         {
@@ -336,7 +348,7 @@ export default {
                 const resourcePath = join(facet.systemJsHomeDir, relPath);
                 console.log(`[Preview Server] SystemJS resource requested: ${relPath} -> ${resourcePath}`);
                 if (await pathExists(resourcePath) && (await stat(resourcePath)).isFile()) {
-                    res.sendFile(resourcePath);
+                    sendFileFromRoot(res, facet.systemJsHomeDir, resourcePath);
                 } else {
                     console.warn(`[Preview Server] SystemJS resource not found: ${resourcePath}`);
                     next();
