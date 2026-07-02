@@ -1,4 +1,5 @@
 import { Node, Component } from 'cc';
+import { broadcastAnimationPropertyCommitted } from '../../animation/property-commit-event';
 
 type BroadcastService = {
     broadcast?(event: string, ...args: unknown[]): void;
@@ -103,7 +104,7 @@ class GizmoBase<T extends Component = Component> {
         try {
             const svc = getService();
             svc?.broadcast?.('gizmo:control-end', propPath);
-            this.broadcastAnimationPropertyCommitted(svc, propPath);
+            this.broadcastAnimationPropertyCommitted(propPath);
         } catch (e) {
             // not ready
         }
@@ -202,20 +203,19 @@ class GizmoBase<T extends Component = Component> {
         return null;
     }
 
-    private broadcastAnimationPropertyCommitted(svc: BroadcastService | null, propPath: string | null): void {
+    private broadcastAnimationPropertyCommitted(propPath: string | null): void {
         if (!propPath) {
             return;
         }
         const EditorExtends = (cc as any).EditorExtends || (globalThis as any).EditorExtends;
-        const normalizedPropPath = propPath.replace(/^_components\b/, '__comps__');
         for (const node of this.nodes) {
             const nodePath = EditorExtends?.Node?.getNodePath?.(node);
             if (!nodePath) {
                 continue;
             }
-            svc?.broadcast?.('animation:property-committed', {
+            broadcastAnimationPropertyCommitted({
                 nodePath,
-                propPath: normalizedPropPath,
+                propPath,
                 source: 'engine',
             });
         }
