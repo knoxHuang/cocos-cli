@@ -90,7 +90,48 @@ export class EngineService extends BaseService<IEngineEvents> implements IEngine
     }
 
     /**
-     * 从服务端拉取当前工程的设计分辨率，同步到 cc.view 并重排已打开场景里的 Canvas。
+     * 渲染调试视图（DebugView）：单一通道调试 / 组合光照项开关 / 纯光照带固有色 / 级联阴影染色。
+     * 与 cocos-editor scene-facade-manager.changeDebugOption 对齐。
+     * 注意：不对外暴露为公共 API（未加入 IEngineService / EngineProxy，不生成到 cocos-cli-types）；
+     * 目前仅由场景编辑器页面（scene-editor.ejs）在浏览器内通过 window.cli.Scene.Engine 直接调用。
+     * @param key 'single' | 'composite' | 'LIGHTING_WITH_BASE_COLOR' | 'CSM_LAYER_COLORATION'
+     * @param value single: DebugViewSingleType 数值；composite: { key: DebugViewCompositeType | 10000(=ALL), value: boolean }；其余: boolean
+     */
+    public async changeDebugOption(key: string, value: any) {
+        // debugView 未在 Root 类型里声明；2D 或引擎未就绪时可能为空
+        const debugView = (director.root as any)?.debugView;
+        if (!debugView) {
+            return;
+        }
+        switch (key) {
+            case 'single':
+                // 渲染单项调试模式
+                debugView.singleMode = value;
+                break;
+            case 'composite':
+                // 渲染组合调试模式（key === 10000 表示全部）
+                if (value?.key === 10000) {
+                    debugView.enableAllCompositeMode(value.value);
+                } else {
+                    debugView.enableCompositeMode(value?.key, value?.value);
+                }
+                break;
+            case 'LIGHTING_WITH_BASE_COLOR':
+                // 光照信息带固有色（纯光照切换）
+                debugView.lightingWithAlbedo = value;
+                break;
+            case 'CSM_LAYER_COLORATION':
+                // 级联阴影染色
+                debugView.csmLayerColoration = value;
+                break;
+            default:
+                // 未知 key：不做任何变更，直接返回，避免空转重绘
+                return;
+        }
+        void this.repaintInEditMode();
+    }
+
+     /* 从服务端拉取当前工程的设计分辨率，同步到 cc.view 并重排已打开场景里的 Canvas。
      *
      * 为什么必须手动重排：编辑器模式（EDITOR_NOT_IN_PREVIEW）下 cc.Canvas 不会注册
      * 'design-resolution-changed' 监听（只有预览/运行模式才注册），只在场景实例化的 __preload 里
