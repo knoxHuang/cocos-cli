@@ -4,6 +4,9 @@ import { arraySchema, createNode, objectSchema } from '../configuration/script/m
 import { getEngineDynamicConfigContribution } from './dynamic-metadata';
 import { createDefaultEngineModuleProjectDefaults } from './module-config-defaults';
 
+const CUSTOM_PIPELINE_NAME_KEY = 'CUSTOM_PIPELINE_NAME';
+const CUSTOM_PIPELINE_NAME_PROPERTY = `engine.macroConfig.${CUSTOM_PIPELINE_NAME_KEY}`;
+
 interface IEngineMetadataOptions {
     defaultConfig: IEngineConfig;
     engineRoot: string;
@@ -19,6 +22,8 @@ export function createEngineMetadataNodes(options: IEngineMetadataOptions): ICoc
         },
     }).metadata;
     const moduleProjectDefaults = createDefaultEngineModuleProjectDefaults(options.engineRoot);
+    const macroProperties = omitProperties(dynamicMetadata.macroProperties, [CUSTOM_PIPELINE_NAME_KEY]);
+    const customPipelineNameDefault = options.defaultConfig.macroConfig?.[CUSTOM_PIPELINE_NAME_KEY];
 
     return [
         createNode('engine.physicsConfig', 'i18n:configuration.engine.physicsConfig.title', 'engine', {
@@ -198,18 +203,37 @@ export function createEngineMetadataNodes(options: IEngineMetadataOptions): ICoc
             }),
         }, 4),
 
+        createNode('engine.graphics', 'i18n:configuration.engine.graphics.title', 'engine', {
+            'engine.graphics.pipeline': {
+                type: 'string',
+                default: options.defaultConfig.graphics?.pipeline ?? 'custom-pipeline',
+                title: 'i18n:configuration.engine.graphics.pipeline.title',
+                enum: ['custom-pipeline', 'legacy-pipeline'],
+                enumDescriptions: [
+                    'i18n:configuration.engine.graphics.pipeline.options.custom',
+                    'i18n:configuration.engine.graphics.pipeline.options.legacy',
+                ],
+            },
+            [CUSTOM_PIPELINE_NAME_PROPERTY]: {
+                type: 'string',
+                default: typeof customPipelineNameDefault === 'string' ? customPipelineNameDefault : 'Builtin',
+                title: 'i18n:configuration.engine.graphics.pipelineName.title',
+                description: 'i18n:configuration.engine.graphics.pipelineName.description',
+            },
+            'engine.graphics.custom-pipeline-post-process': {
+                type: 'boolean',
+                default: options.defaultConfig.graphics?.['custom-pipeline-post-process'] ?? false,
+                title: 'i18n:configuration.engine.graphics.customPipelinePostProcess.title',
+                description: 'i18n:configuration.engine.graphics.customPipelinePostProcess.description',
+            },
+        }, 5),
+
         createNode('engine.rendering', 'i18n:configuration.engine.rendering.title', 'engine', {
             'engine.renderPipeline': {
                 type: 'string',
                 default: options.defaultConfig.renderPipeline,
                 title: 'i18n:configuration.engine.rendering.renderPipeline.title',
                 description: 'i18n:configuration.engine.rendering.renderPipeline.description',
-            },
-            'engine.customPipeline': {
-                type: 'boolean',
-                default: options.defaultConfig.customPipeline,
-                title: 'i18n:configuration.engine.rendering.customPipeline.title',
-                description: 'i18n:configuration.engine.rendering.customPipeline.description',
             },
             'engine.highQuality': {
                 type: 'boolean',
@@ -222,7 +246,7 @@ export function createEngineMetadataNodes(options: IEngineMetadataOptions): ICoc
                 minimum: 1,
                 title: 'i18n:configuration.engine.rendering.downloadMaxConcurrency.title',
             },
-        }, 5),
+        }, 6),
 
         createNode('engine.jointTextureLayout', 'i18n:configuration.engine.jointTextureLayout.title', 'engine', {
             'engine.customJointTextureLayouts': arraySchema(objectSchema({
@@ -263,10 +287,10 @@ export function createEngineMetadataNodes(options: IEngineMetadataOptions): ICoc
                 title: 'i18n:configuration.engine.jointTextureLayout.customJointTextureLayouts.title',
                 description: 'i18n:configuration.engine.jointTextureLayout.customJointTextureLayouts.description',
             }),
-        }, 6),
+        }, 7),
 
         createNode('engine.macroConfig', 'i18n:configuration.engine.macroConfig.title', 'engine', {
-            ...prefixProperties('engine.macroConfig', dynamicMetadata.macroProperties),
+            ...prefixProperties('engine.macroConfig', macroProperties),
             'engine.macroCustom': arraySchema(objectSchema({
                 key: {
                     type: 'string',
@@ -284,7 +308,7 @@ export function createEngineMetadataNodes(options: IEngineMetadataOptions): ICoc
                 title: 'i18n:configuration.engine.macroConfig.macroCustom.title',
                 description: 'i18n:configuration.engine.macroConfig.macroCustom.description',
             }),
-        }, 7),
+        }, 8),
 
         createNode('engine.customLayers', 'i18n:configuration.engine.layers.customLayers.title', 'engine', {
             'engine.customLayers': {
@@ -293,7 +317,7 @@ export function createEngineMetadataNodes(options: IEngineMetadataOptions): ICoc
                 title: 'i18n:configuration.engine.layers.customLayers.title',
                 description: 'i18n:configuration.engine.layers.customLayers.description',
             },
-        }, 8),
+        }, 9),
 
         createNode('engine.sortingLayers', 'i18n:configuration.engine.layers.sortingLayers.title', 'engine', {
             'engine.sortingLayers': {
@@ -302,8 +326,17 @@ export function createEngineMetadataNodes(options: IEngineMetadataOptions): ICoc
                 title: 'i18n:configuration.engine.layers.sortingLayers.title',
                 description: 'i18n:configuration.engine.layers.sortingLayers.description',
             },
-        }, 9),
+        }, 10),
     ];
+}
+
+function omitProperties<T>(
+    properties: Record<string, T>,
+    keys: string[]
+): Record<string, T> {
+    return Object.fromEntries(
+        Object.entries(properties).filter(([key]) => !keys.includes(key))
+    );
 }
 
 function prefixProperties(
