@@ -1632,6 +1632,32 @@ describe('Animation Service 场景进程测试', () => {
         expect(redoDump.curves.some((curve: any) => curve.nodePath === childRelativePath && curve.key === 'position')).toBe(true);
     });
 
+    it('applyOperations 可删除空的 child active 属性轨道', async () => {
+        await ensureAnimationSession(childRootNodePath, childClipUuid);
+        await resetPropertyCurves(childRootNodePath, childClipUuid);
+
+        const childRelativePath = 'AnimationServiceChildSamplingChild';
+        const addResult = await request('applyOperations', [{
+            operations: [
+                { type: 'addPropertyCurve', clipUuid: childClipUuid, nodePath: childRelativePath, propKey: 'active', value: true },
+            ],
+        }]);
+        const afterAdd = await request('queryClip', [{ rootPath: childRootNodePath, clipUuid: childClipUuid }]);
+
+        expect(addResult).toEqual({ state: 'success', result: true });
+        expect(afterAdd.curves.some((curve: any) => curve.nodePath === childRelativePath && curve.key === 'active')).toBe(true);
+
+        const removeResult = await request('applyOperations', [{
+            operations: [
+                { type: 'removePropertyCurve', clipUuid: childClipUuid, nodePath: childRelativePath, propKey: 'active' },
+            ],
+        }]);
+        const afterRemove = await request('queryClip', [{ rootPath: childRootNodePath, clipUuid: childClipUuid }]);
+
+        expect(removeResult).toEqual({ state: 'success', result: true });
+        expect(afterRemove.curves.some((curve: any) => curve.nodePath === childRelativePath && curve.key === 'active')).toBe(false);
+    });
+
     it('applyOperations 可把已消费的 scene 属性 undo 合并进 animation scoped undo', async () => {
         await ensureAnimationSession(emptyNodePath, emptyClipUuid);
         await resetRootPositionCurve(emptyNodePath, emptyClipUuid);
