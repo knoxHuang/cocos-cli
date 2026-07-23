@@ -128,6 +128,16 @@ export class UndoService extends BaseService<IUndoEvents> implements IUndoServic
         return this._undoMgr.hasScopedDifferenceAfterCheckpoint(checkpoint, scope);
     }
 
+    async discardScopedChangesAfterCheckpoint(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): Promise<IUndoRedoResult> {
+        const wasDirty = this._undoMgr.isDirty();
+        const result = await this._undoMgr.discardScopedChangesAfterCheckpoint(checkpoint, scope);
+        if (result.success) {
+            this._emitDirtyIfChanged(wasDirty);
+        }
+        this.broadcast('undo:changed');
+        return result;
+    }
+
     hasDifferenceOutsideScope(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean {
         return this._undoMgr.hasDifferenceOutsideScope(checkpoint, scope);
     }

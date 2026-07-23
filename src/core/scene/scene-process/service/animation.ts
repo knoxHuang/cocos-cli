@@ -869,11 +869,9 @@ export class AnimationService extends BaseService<Record<string, any>> implement
 
     private async _discardAnimationSessionChanges(session: IAnimationSession): Promise<void> {
         const scope = this._createAnimationUndoScope(session.clipUuid);
-        while (Service.Undo.hasScopedDifferenceAfterCheckpoint(session.undoBaseline, scope)) {
-            const result = await Service.Undo.undo({ scope });
-            if (!result.success) {
-                throw new Error(result.reason || 'Failed to discard animation changes.');
-            }
+        const result = await Service.Undo.discardScopedChangesAfterCheckpoint(session.undoBaseline, scope);
+        if (!result.success) {
+            throw new Error(result.reason || 'Failed to discard animation changes.');
         }
     }
 

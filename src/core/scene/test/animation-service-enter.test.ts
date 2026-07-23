@@ -20,6 +20,7 @@ const mockService = {
         createCheckpoint: jest.fn(() => ({ commandId: null, generation: 0 })),
         hasScopedDifference: jest.fn(() => false),
         hasScopedDifferenceAfterCheckpoint: jest.fn(() => false),
+        discardScopedChangesAfterCheckpoint: jest.fn(async () => ({ success: true })),
         hasDifferenceOutsideScope: jest.fn(() => false),
         isDirty: jest.fn(() => false),
         markSaved: jest.fn(),

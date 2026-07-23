@@ -134,6 +134,34 @@ describe('SceneUndoManager', () => {
         expect(manager.hasScopedDifferenceAfterCheckpoint(savedCheckpoint, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
     });
 
+    it('discards scoped changes while preserving interleaved commands', async () => {
+        const manager = new SceneUndoManager();
+        const baselineCommand = new ControlledCommand('baseline', true, { editorType: 'scene', mode: 'general' }, 'node:set-property');
+        const firstAnimationCommand = new ControlledCommand('animation-1', true, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' }, 'animation:clip-snapshot');
+        const interleavedSceneCommand = new ControlledCommand('scene-1', true, { editorType: 'scene', mode: 'general' }, 'node:set-property');
+        const secondAnimationCommand = new ControlledCommand('animation-2', true, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' }, 'animation:clip-snapshot');
+
+        manager.push(baselineCommand);
+        const baseline = manager.createCheckpoint();
+        manager.push(firstAnimationCommand);
+        manager.push(interleavedSceneCommand);
+        manager.push(secondAnimationCommand);
+
+        await expect(manager.discardScopedChangesAfterCheckpoint(
+            baseline,
+            { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' },
+        )).resolves.toMatchObject({ success: true });
+
+        expect(firstAnimationCommand.calls).toEqual(['undo:animation-1']);
+        expect(secondAnimationCommand.calls).toEqual(['undo:animation-2']);
+        expect(interleavedSceneCommand.calls).toEqual(['undo:scene-1', 'redo:scene-1']);
+        expect(manager.getHistoryForTesting().map(command => command.meta.id)).toEqual(['baseline', 'scene-1']);
+        expect(manager.canUndo()).toBe(true);
+
+        await manager.undo();
+        expect(interleavedSceneCommand.calls).toEqual(['undo:scene-1', 'redo:scene-1', 'undo:scene-1']);
+    });
+
     it('does not treat animation changes before the session baseline as current session dirty', async () => {
         const manager = new SceneUndoManager();
         const previousAnimationCommand = new ControlledCommand('previous-animation', true, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' }, 'animation:clip-snapshot');
