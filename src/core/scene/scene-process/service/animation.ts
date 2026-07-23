@@ -163,6 +163,8 @@ export class AnimationService extends BaseService<Record<string, any>> implement
 
         if (options.save) {
             await this.save();
+        } else {
+            await this._discardAnimationSessionChanges(session);
         }
 
         await this._stopCurrent();
@@ -861,8 +863,18 @@ export class AnimationService extends BaseService<Record<string, any>> implement
         return getAnimationSessionRootNode(requireAnimationSession(this._session));
     }
 
+    private async _discardAnimationSessionChanges(session: IAnimationSession): Promise<void> {
+        const scope = this._createAnimationUndoScope(session.clipUuid);
+        while (Service.Undo.hasScopedDifferenceAfterCheckpoint(session.undoBaseline, scope)) {
+            const result = await Service.Undo.undo({ scope });
+            if (!result.success) {
+                throw new Error(result.reason || 'Failed to discard animation changes.');
+            }
+        }
+    }
+
     private _isAnimationSessionDirty(session: IAnimationSession): boolean {
-        return Service.Undo.hasScopedDifference(session.undoBaseline, this._createAnimationUndoScope(session.clipUuid));
+        return Service.Undo.hasScopedDifferenceAfterCheckpoint(session.undoBaseline, this._createAnimationUndoScope(session.clipUuid));
     }
 
     private _createAnimationUndoScope(clipUuid: string): Partial<IUndoScope> {

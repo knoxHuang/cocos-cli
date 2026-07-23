@@ -124,6 +124,10 @@ export class UndoService extends BaseService<IUndoEvents> implements IUndoServic
         return this._undoMgr.hasScopedDifference(checkpoint, scope);
     }
 
+    hasScopedDifferenceAfterCheckpoint(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean {
+        return this._undoMgr.hasScopedDifferenceAfterCheckpoint(checkpoint, scope);
+    }
+
     hasDifferenceOutsideScope(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean {
         return this._undoMgr.hasDifferenceOutsideScope(checkpoint, scope);
     }
