@@ -573,6 +573,7 @@ export class AnimationService extends BaseService<Record<string, any>> implement
         const rootNode = this._getSessionRootNode();
         const propertyMetadataContext = createAnimationPropertyCurveMetadataContext(rootNode);
         const savedSnapshot = captureAnimationClipSnapshot(state.clip, propertyMetadataContext);
+        const animationDirtyAtSave = this._isAnimationSessionDirty(session);
         ensureClipEvents(state.clip);
         this._markSelfSavedClipRefresh(session.clipUuid);
         let saved = false;
@@ -603,7 +604,10 @@ export class AnimationService extends BaseService<Record<string, any>> implement
                     Service.Undo.markSaved();
                 }
             }
-            session.undoBaseline = Service.Undo.createCheckpoint();
+            session.undoBaseline = {
+                ...Service.Undo.createCheckpoint(),
+                includeCheckpointCommand: animationDirtyAtSave,
+            };
             session.globalDirtyAtEnter = Service.Undo.isDirty();
         } else {
             this._selfSavedClipRefreshes.delete(session.clipUuid);

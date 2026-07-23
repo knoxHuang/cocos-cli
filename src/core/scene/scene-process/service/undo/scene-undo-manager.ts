@@ -176,9 +176,21 @@ class SceneUndoManager {
             return false;
         }
         const checkpointIndex = this._resolveCheckpointIndex(checkpoint);
-        if (checkpointIndex === undefined || this._index <= checkpointIndex) {
+        if (checkpointIndex === undefined) {
             return false;
         }
+
+        // 普通 session baseline 不包含 checkpoint 所在命令；
+        // 保存后的 Animation baseline 可以显式包含该命令，
+        // 这样撤销刚保存的动画修改后，session 会重新变 dirty。
+        if (this._index < checkpointIndex) {
+            const command = checkpoint.includeCheckpointCommand ? this._commandArray[checkpointIndex] : undefined;
+            return !!command && matchesUndoScope(command.meta.scope, scope);
+        }
+        if (this._index === checkpointIndex) {
+            return false;
+        }
+
         for (let index = checkpointIndex + 1; index <= this._index; index++) {
             const command = this._commandArray[index];
             if (command && matchesUndoScope(command.meta.scope, scope)) {

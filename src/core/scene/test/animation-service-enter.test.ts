@@ -18,6 +18,7 @@ const mockService = {
     },
     Undo: {
         createCheckpoint: jest.fn(() => ({ commandId: null, generation: 0 })),
+        hasScopedDifferenceAfterCheckpoint: jest.fn(() => false),
         hasDifferenceOutsideScope: jest.fn(() => false),
         isDirty: jest.fn(() => false),
         markSaved: jest.fn(),

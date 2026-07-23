@@ -6693,6 +6693,7 @@ export declare interface IUndoBeginOptions {
 export declare interface IUndoCheckpoint {
     commandId: string | null;
     generation: number;
+    includeCheckpointCommand?: boolean;
 }
 export declare interface IUndoCommand {
     meta: IUndoCommandMeta;

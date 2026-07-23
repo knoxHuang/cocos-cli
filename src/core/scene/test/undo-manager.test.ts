@@ -112,13 +112,13 @@ describe('SceneUndoManager', () => {
 
         manager.push(animationCommand);
         expect(manager.hasScopedDifference(baseline, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(true);
-        const savedAnimation = manager.createCheckpoint();
+        const savedAnimation = { ...manager.createCheckpoint(), includeCheckpointCommand: true };
         expect(manager.hasScopedDifference(savedAnimation, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
 
         await manager.undo({ scope: { editorType: 'animation', mode: 'animation' } });
         expect(manager.hasScopedDifference(savedAnimation, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(true);
         expect(manager.hasScopedDifference(baseline, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
-        expect(manager.hasScopedDifferenceAfterCheckpoint(savedAnimation, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
+        expect(manager.hasScopedDifferenceAfterCheckpoint(savedAnimation, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(true);
         expect(manager.hasScopedDifferenceAfterCheckpoint(baseline, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
     });
 
