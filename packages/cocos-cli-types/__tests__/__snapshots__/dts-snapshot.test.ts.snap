@@ -6750,6 +6750,7 @@ export declare interface IUndoService {
     isDirty(): boolean;
     createCheckpoint(): IUndoCheckpoint;
     hasScopedDifference(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean;
+    hasScopedDifferenceAfterCheckpoint(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean;
     hasDifferenceOutsideScope(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean;
     canUndo(options?: IUndoOperationOptions): boolean;
     canRedo(options?: IUndoOperationOptions): boolean;
