@@ -270,7 +270,7 @@ async function setNodeProperty(path: string, propPath: string, value: any, recor
 }
 
 function readGlobalValue(sceneDump: any, path: string): any {
-    let current = sceneDump;
+    let current = sceneDump?._globals;
     for (const key of path.split('.').slice(1)) {
         current = current?.value && Object.prototype.hasOwnProperty.call(current.value, key)
             ? current.value[key]
