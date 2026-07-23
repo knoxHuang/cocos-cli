@@ -878,7 +878,11 @@ export class AnimationService extends BaseService<Record<string, any>> implement
     }
 
     private _isAnimationSessionDirty(session: IAnimationSession): boolean {
-        return Service.Undo.hasScopedDifferenceAfterCheckpoint(session.undoBaseline, this._createAnimationUndoScope(session.clipUuid));
+        const scope = this._createAnimationUndoScope(session.clipUuid);
+        if (session.undoBaseline.includeCheckpointCommand) {
+            return Service.Undo.hasScopedDifference(session.undoBaseline, scope);
+        }
+        return Service.Undo.hasScopedDifferenceAfterCheckpoint(session.undoBaseline, scope);
     }
 
     private _createAnimationUndoScope(clipUuid: string): Partial<IUndoScope> {
