@@ -171,6 +171,23 @@ class SceneUndoManager {
         return this._hasDifferenceSince(checkpoint, command => matchesUndoScope(command.meta.scope, scope));
     }
 
+    hasScopedDifferenceAfterCheckpoint(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean {
+        if (checkpoint.generation !== this._checkpointGeneration) {
+            return false;
+        }
+        const checkpointIndex = this._resolveCheckpointIndex(checkpoint);
+        if (checkpointIndex === undefined || this._index <= checkpointIndex) {
+            return false;
+        }
+        for (let index = checkpointIndex + 1; index <= this._index; index++) {
+            const command = this._commandArray[index];
+            if (command && matchesUndoScope(command.meta.scope, scope)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     hasDifferenceOutsideScope(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean {
         return this._hasDifferenceSince(checkpoint, command => !matchesUndoScope(command.meta.scope, scope));
     }

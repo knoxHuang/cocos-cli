@@ -117,6 +117,9 @@ export interface IUndoService {
     /** 当前 cursor 和 checkpoint 之间存在匹配 scope 的命令差异时返回 true。 */
     hasScopedDifference(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean;
 
+    /** 当前 cursor 位于 checkpoint 之后且存在匹配 scope 的命令差异时返回 true。 */
+    hasScopedDifferenceAfterCheckpoint(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean;
+
     /** 当前 cursor 和 checkpoint 之间存在不匹配 scope 的命令差异时返回 true。 */
     hasDifferenceOutsideScope(checkpoint: IUndoCheckpoint, scope: Partial<IUndoScope>): boolean;
 

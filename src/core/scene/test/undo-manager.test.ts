@@ -118,6 +118,23 @@ describe('SceneUndoManager', () => {
         await manager.undo({ scope: { editorType: 'animation', mode: 'animation' } });
         expect(manager.hasScopedDifference(savedAnimation, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(true);
         expect(manager.hasScopedDifference(baseline, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
+        expect(manager.hasScopedDifferenceAfterCheckpoint(savedAnimation, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
+        expect(manager.hasScopedDifferenceAfterCheckpoint(baseline, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
+    });
+
+    it('does not treat animation changes before the session baseline as current session dirty', async () => {
+        const manager = new SceneUndoManager();
+        const previousAnimationCommand = new ControlledCommand('previous-animation', true, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' }, 'animation:clip-snapshot');
+        const sessionAnimationCommand = new ControlledCommand('session-animation', true, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' }, 'animation:clip-snapshot');
+
+        manager.push(previousAnimationCommand);
+        const baseline = manager.createCheckpoint();
+        manager.push(sessionAnimationCommand);
+        await manager.undo();
+        await manager.undo();
+
+        expect(manager.hasScopedDifference(baseline, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(true);
+        expect(manager.hasScopedDifferenceAfterCheckpoint(baseline, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
     });
 
     it('groups child commands into one composite command', async () => {
