@@ -122,6 +122,18 @@ describe('SceneUndoManager', () => {
         expect(manager.hasScopedDifferenceAfterCheckpoint(baseline, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
     });
 
+    it('does not expose an already-undone saved command as discard work', async () => {
+        const manager = new SceneUndoManager();
+        const animationCommand = new ControlledCommand('saved-animation', true, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' }, 'animation:clip-snapshot');
+
+        manager.push(animationCommand);
+        const savedCheckpoint = { ...manager.createCheckpoint(), includeCheckpointCommand: true };
+        await manager.undo({ scope: { editorType: 'animation', mode: 'animation' } });
+
+        expect(manager.hasScopedDifference(savedCheckpoint, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(true);
+        expect(manager.hasScopedDifferenceAfterCheckpoint(savedCheckpoint, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' })).toBe(false);
+    });
+
     it('does not treat animation changes before the session baseline as current session dirty', async () => {
         const manager = new SceneUndoManager();
         const previousAnimationCommand = new ControlledCommand('previous-animation', true, { editorType: 'animation', mode: 'animation', assetUuid: 'clip-1' }, 'animation:clip-snapshot');
